@@ -40,24 +40,7 @@ AC_ARG_VAR([WESTON_SHELL_CLIENT],
 
 PKG_PROG_PKG_CONFIG()
 
-AC_CHECK_FUNC([dlopen], [],
-              AC_CHECK_LIB([dl], [dlopen], DLOPEN_LIBS="-ldl"))
-AC_SUBST(DLOPEN_LIBS)
-
-AC_CHECK_DECL(SFD_CLOEXEC,[],
-	      [AC_MSG_ERROR("SFD_CLOEXEC is needed to compile weston")],
-	      [[#include <sys/signalfd.h>]])
-AC_CHECK_DECL(TFD_CLOEXEC,[],
-	      [AC_MSG_ERROR("TFD_CLOEXEC is needed to compile weston")],
-	      [[#include <sys/timerfd.h>]])
-AC_CHECK_DECL(CLOCK_MONOTONIC,[],
-	      [AC_MSG_ERROR("CLOCK_MONOTONIC is needed to compile weston")],
-	      [[#include <time.h>]])
-AC_CHECK_HEADERS([execinfo.h])
-
-AC_CHECK_FUNCS([mkostemp strchrnul initgroups posix_fallocate])
-
-COMPOSITOR_MODULES="wayland-server >= 1.3.90 pixman-1"
+COMPOSITOR_MODULES="wayland-server >= 1.4 pixman-1"
 
 AC_ARG_ENABLE(egl, [  --disable-egl],,
               enable_egl=yes)
@@ -416,7 +399,7 @@ AC_ARG_ENABLE(ivi-shell,
 	      enable_ivi_shell=yes)
 AM_CONDITIONAL(ENABLE_IVI_SHELL, test "x$enable_ivi_shell" = "xyes")
 if test x$enable_ivi_shell = xyes; then
-  PKG_CHECK_MODULES(IVI_SHELL, [cairo])
+  PKG_CHECK_MODULES(IVI_SHELL, [wayland-client cairo >= 1.10.0 xkbcommon wayland-cursor])
 fi
 
 AC_ARG_ENABLE(wcap-tools, [  --disable-wcap-tools],, enable_wcap_tools=yes)
