@@ -33,7 +33,7 @@ libweston_layout_la_SOURCES =			\
 
 ivi_shell = ivi-shell.la
 ivi_shell_la_LDFLAGS = -module -avoid-version
-ivi_shell_la_LIBADD = $(COMPOSITOR_LIBS) $(IVI_SHELL_LIBS) -lweston-layout
+ivi_shell_la_LIBADD = $(COMPOSITOR_LIBS) $(IVI_SHELL_LIBS) $(libweston_layout)
 ivi_shell_la_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS) $(IVI_SHELL_CFLAGS)
 ivi_shell_la_SOURCES =				\
 	ivi-shell.c				\
@@ -44,7 +44,7 @@ ivi_shell_la_SOURCES =				\
 
 hmi_controller = hmi-controller.la
 hmi_controller_la_LDFLAGS = -module -avoid-version
-hmi_controller_la_LIBADD = $(IVI_SHELL_LIBS) -lweston-layout ../shared/libshared-cairo.la
+hmi_controller_la_LIBADD = $(IVI_SHELL_LIBS) $(libweston_layout) ../shared/libshared-cairo.la
 hmi_controller_la_CFLAGS = $(GCC_CFLAGS) $(IVI_SHELL_CFLAGS)
 hmi_controller_la_SOURCES =			\
 	hmi-controller.c			\

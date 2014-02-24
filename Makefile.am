@@ -8,16 +8,10 @@ endif
 
 SUBDIRS =					\
 	shared					\
-	src					\
-	$(xwayland_subdir)			\
-	desktop-shell				\
 	ivi-shell				\
 	clients					\
 	data					\
-	protocol				\
-	tests					\
-	$(wcap_subdir)				\
-	man
+	protocol
 
 DISTCHECK_CONFIGURE_FLAGS = --disable-setuid-install
 
