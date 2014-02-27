@@ -1,3 +1,6 @@
+* Thu Feb 27 2014 Ossama Othman <ossama.othman@intel.com> 3331500
+- Change image size to avoid what is used as cursor on DRM backend.
+
 * Mon Feb 24 2014 Ossama Othman <ossama.othman@intel.com> 8ba5f92
 - Initial package for Tizen IVI.
 
