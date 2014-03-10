@@ -12,7 +12,8 @@ dist_westondata_DATA =				\
 	icon_ivi_flower.png			\
 	icon_ivi_simple-egl.png			\
 	icon_ivi_simple-shm.png			\
-	icon_ivi_smoke.png
+	icon_ivi_smoke.png			\
+	icon_ivi_terminal.png
 
 if HAVE_RSVG_CONVERT
 wayland_icon_png = wayland.png
