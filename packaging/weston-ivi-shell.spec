@@ -5,7 +5,8 @@ Summary:        Weston IVI Shell
 License:        MIT
 Group:          Graphics & UI Framework/Wayland Window System
 Url:            https://github.com/ntanibata/weston-ivi-shell/
-Source0:         %name-%version.tar.xz
+Source0:        %name-%version.tar.xz
+Source1:        weston.ini
 Source1001: 	weston-ivi-shell.manifest
 BuildRequires:	autoconf >= 2.64, automake >= 1.11
 BuildRequires:  libtool >= 2.2
@@ -28,6 +29,7 @@ A reference Weston shell designed for use in IVI systems.
 %package devel
 Summary: Development files for package %{name}
 Group:   Graphics & UI Framework/Development
+Requires:  %{name} = %{version}
 %description devel
 This package provides header files and other developer releated files
 for package %{name}.
@@ -39,6 +41,17 @@ Group:   Graphics & UI Framework/Development
 This package provides a set of example wayland clients useful for
 validating the functionality of wayland with very little dependencies
 on other system components.
+
+%package config
+Summary:    Tizen IVI Weston configuration for package %{name}
+Group:      Automotive/Configuration
+Requires:   weston-clients
+Requires:   weekeyboard
+Requires:   genivi-shell
+Conflicts:  weston-ivi-config
+Conflicts:  ico-uxf-weston-plugin
+%description config
+This package contains Tizen IVI-specific configuration for %{name}.
 
 %prep
 %setup -q
@@ -60,6 +73,10 @@ install -m 755 clients/weston-flower-ivi %{buildroot}%{_bindir}
 install -m 755 clients/weston-smoke-ivi %{buildroot}%{_bindir}
 install -m 755 clients/weston-clickdot-ivi %{buildroot}%{_bindir}
 
+%define weston_config_dir %{_sysconfdir}/xdg/weston
+mkdir -p %{buildroot}%{weston_config_dir}
+install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
+
 %files
 %manifest %{name}.manifest
 %defattr(-,root,root)
@@ -78,5 +95,9 @@ install -m 755 clients/weston-clickdot-ivi %{buildroot}%{_bindir}
 %_bindir/weston-flower-ivi
 %_bindir/weston-smoke-ivi
 %_bindir/weston-clickdot-ivi
+
+%files config
+%manifest %{name}.manifest
+%config %{weston_config_dir}/weston.ini
 
 %changelog
