@@ -97,8 +97,6 @@ struct ivi_shell
     struct wl_list list_surface;
     struct wl_list list_weston_surface;
     struct wl_list list_shell_surface;
-
-    struct wl_list list_client;
 };
 
 /* ------------------------------------------------------------------------- */
@@ -362,12 +360,6 @@ shell_surface_set_title(struct wl_client *client,
     } else {
         shsurf->title = strdup("");
     }
-
-    struct wl_resource *res = NULL;
-    wl_resource_for_each(res, &shsurf->shell->list_client) {
-       ivi_application_send_wl_shell_info(res, shsurf->pid, shsurf->title);
-    }
-
 }
 
 static void
@@ -514,11 +506,6 @@ shell_get_shell_surface(struct wl_client   *client,
 
     shsurf->pid = pid;
     wl_list_insert(&shell->list_shell_surface, &shsurf->link);
-
-    struct wl_resource *res = NULL;
-    wl_resource_for_each(res, &shell->list_client) {
-       ivi_application_send_wl_shell_info(res, shsurf->pid, shsurf->title);
-    }
 }
 
 static const struct wl_shell_interface shell_implementation = {
@@ -709,12 +696,6 @@ static const struct ivi_application_interface application_implementation = {
 };
 
 static void
-unbind_resource(struct wl_resource *resource)
-{
-    wl_list_remove(wl_resource_get_link(resource));
-}
-
-static void
 bind_ivi_application(struct wl_client *client,
                 void *data, uint32_t version, uint32_t id)
 {
@@ -725,9 +706,7 @@ bind_ivi_application(struct wl_client *client,
 
     wl_resource_set_implementation(resource,
                                    &application_implementation,
-                                   shell, unbind_resource);
-
-    wl_list_insert(&shell->list_client, wl_resource_get_link(resource));
+                                   shell, NULL);
 }
 
 static void
@@ -750,7 +729,6 @@ init_ivi_shell(struct weston_compositor *ec, struct ivi_shell *shell)
     wl_list_init(&shell->list_surface);
     wl_list_init(&shell->list_weston_surface);
     wl_list_init(&shell->list_shell_surface);
-    wl_list_init(&shell->list_client);
 }
 
 /* ------------------------------------------------------------------------- */
