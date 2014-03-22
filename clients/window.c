@@ -74,6 +74,7 @@ typedef void *EGLContext;
 #ifdef ENABLE_IVI_CLIENT
 #include <sys/types.h>
 #include "../ivi-shell/ivi-application-client-protocol.h"
+#define IVI_SURFACE_ID 9000
 #endif
 
 struct shm_pool;
@@ -1416,12 +1417,10 @@ surface_create_surface(struct surface *surface, int dx, int dy, uint32_t flags)
 
 #ifdef ENABLE_IVI_CLIENT
 	if (!surface->toysurface) {
-		static uint32_t count = 0;
-		uint32_t id_ivisurf =
-			(uint32_t)getpid() | 0x80000000 | (count << 24);
-		count++;
-		surface->window->ivi_surface = ivi_application_surface_create(
-			display->ivi_application, id_ivisurf, surface->surface);
+		uint32_t id_ivisurf = IVI_SURFACE_ID + (uint32_t)getpid();
+		surface->window->ivi_surface =
+			ivi_application_surface_create(display->ivi_application,
+						       id_ivisurf, surface->surface);
 		if (surface->window->ivi_surface == NULL) {
 			fprintf(stderr, "Failed to create ivi_client_surface\n");
 			abort();
@@ -5050,8 +5049,9 @@ registry_handle_global(void *data, struct wl_registry *registry, uint32_t id,
 	}
 #ifdef ENABLE_IVI_CLIENT
 	else if (strcmp(interface, "ivi_application") == 0) {
-		d->ivi_application = wl_registry_bind(
-			registry, id, &ivi_application_interface, 1);
+		d->ivi_application =
+			wl_registry_bind(registry, id,
+					 &ivi_application_interface, 1);
 	}
 #endif
 
