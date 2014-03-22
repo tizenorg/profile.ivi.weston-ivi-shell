@@ -10,7 +10,7 @@ protocol_sources =				\
 	xdg-shell.xml				\
 	scaler.xml                              \
 	ivi-application.xml			\
-	hmi-controller.xml
+	ivi-hmi-controller.xml
 
 if HAVE_XMLLINT
 .PHONY: validate
