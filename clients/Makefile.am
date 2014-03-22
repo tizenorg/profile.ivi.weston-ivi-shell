@@ -22,7 +22,7 @@ AM_CFLAGS = $(GCC_CFLAGS)
 AM_CPPFLAGS =					\
 	-DDATADIR='"$(datadir)"'		\
 	-DBINDIR='"$(bindir)"'			\
-	$(CLIENT_CFLAGS) $(CAIRO_EGL_CFLAGS) $(CAIRO_CFLAGS)
+	$(CLIENT_CFLAGS) $(CAIRO_EGL_CFLAGS)
 
 if BUILD_SIMPLE_CLIENTS
 simple_clients_programs =			\
@@ -208,7 +208,6 @@ weston_desktop_shell_SOURCES =			\
 	desktop-shell-client-protocol.h		\
 	desktop-shell-protocol.c
 weston_desktop_shell_LDADD = libtoytoolkit.la
-endif
 
 BUILT_SOURCES =					\
 	screenshooter-client-protocol.h		\
@@ -227,6 +226,7 @@ BUILT_SOURCES =					\
 	workspaces-protocol.c
 
 CLEANFILES = $(BUILT_SOURCES)
+endif
 
 if BUILD_FULL_GL_CLIENTS
 full_gl_client_programs = weston-gears
@@ -267,7 +267,7 @@ libivitoytoolkit_la_SOURCES =			\
 libivitoytoolkit_la_CPPFLAGS = $(AM_CPPFLAGS) -DENABLE_IVI_CLIENT
 
 libivitoytoolkit_la_LIBADD =			\
-	$(IVI_SHELL_LIBS)			\
+	$(CLIENT_LIBS)				\
 	$(CAIRO_EGL_LIBS)			\
 	../shared/libshared-cairo.la -lrt -lm
 
