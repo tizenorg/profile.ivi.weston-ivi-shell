@@ -72,6 +72,8 @@ install -m 755 clients/weston-simple-egl-ivi %{buildroot}%{_bindir}
 install -m 755 clients/weston-flower-ivi %{buildroot}%{_bindir}
 install -m 755 clients/weston-smoke-ivi %{buildroot}%{_bindir}
 install -m 755 clients/weston-clickdot-ivi %{buildroot}%{_bindir}
+install -m 755 clients/weston-editor-ivi buildroot}%{_bindir}
+install -m 755 clients/weston-dnd-ivi %{buildroot}%{_bindir}
 
 %define weston_config_dir %{_sysconfdir}/xdg/weston
 mkdir -p %{buildroot}%{weston_config_dir}
@@ -95,6 +97,8 @@ install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
 %_bindir/weston-flower-ivi
 %_bindir/weston-smoke-ivi
 %_bindir/weston-clickdot-ivi
+%_bindir/weston-dnd-ivi
+%_bindir/weston-weston-editor-ivi
 
 %files config
 %manifest %{name}.manifest
