@@ -32,34 +32,82 @@
 #include <sys/mman.h>
 #include <getopt.h>
 #include <pthread.h>
-#include "hmi-controller.h"
+#include <wayland-cursor.h>
+#include "hmi-controller-homescreen.h"
 #include "../shared/cairo-util.h"
+#include "../shared/config-parser.h"
 #include "ivi-application-client-protocol.h"
-#include "hmi-controller-client-protocol.h"
+#include "ivi-hmi-controller-client-protocol.h"
+
+/**
+ * A reference implementation how to use ivi-hmi-controller interface to interact
+ * with hmi-controller. This is launched from hmi-controller by using
+ * hmi_client_start and create a pthread.
+ *
+ * The basic flow is as followed,
+ * 1/ create pthread
+ * 2/ read configuration from weston.ini.
+ * 3/ draw png file to surface according to configuration of weston.ini
+ * 4/ set up UI by using ivi-hmi-controller protocol
+ * 5/ Enter event loop
+ * 6/ If a surface receives touch/pointer event, followings are invoked according
+ *    to type of event and surface
+ * 6-1/ If a surface to launch ivi_application receive touch up, it execs
+ *      ivi-application configured in weston.ini.
+ * 6-2/ If a surface to switch layout mode receive touch up, it sends a request,
+ *      ivi_hmi_controller_switch_mode, to hmi-controller.
+ * 6-3/ If a surface to show workspace having launchers, it sends a request,
+ *      ivi_hmi_controller_home, to hmi-controller.
+ * 6-4/ If touch down events happens in workspace,
+ *      ivi_hmi_controller_workspace_control is sent to slide workspace.
+ *      When control finished, event: ivi_hmi_controller_workspace_end_control
+ *      is received.
+ */
 
 /*****************************************************************************
  *  structure, globals
  ****************************************************************************/
+enum cursor_type {
+    CURSOR_BOTTOM_LEFT,
+    CURSOR_BOTTOM_RIGHT,
+    CURSOR_BOTTOM,
+    CURSOR_DRAGGING,
+    CURSOR_LEFT_PTR,
+    CURSOR_LEFT,
+    CURSOR_RIGHT,
+    CURSOR_TOP_LEFT,
+    CURSOR_TOP_RIGHT,
+    CURSOR_TOP,
+    CURSOR_IBEAM,
+    CURSOR_HAND1,
+    CURSOR_WATCH,
+
+    CURSOR_BLANK
+};
 struct wlContextCommon {
     struct wl_display      *wlDisplay;
     struct wl_registry     *wlRegistry;
     struct wl_compositor   *wlCompositor;
     struct wl_shm          *wlShm;
-    struct wl_shell        *wlShell;
     struct wl_seat         *wlSeat;
     struct wl_pointer      *wlPointer;
     struct wl_touch        *wlTouch;
     struct ivi_application *iviApplication;
-    struct hmi_controller  *hmiController;
-
+    struct ivi_hmi_controller  *hmiCtrl;
+    struct hmi_homescreen_setting *hmi_setting;
     struct wl_list         *list_wlContextStruct;
     struct wl_surface      *enterSurface;
+    int32_t                 is_home_on;
+    struct wl_cursor_theme  *cursor_theme;
+    struct wl_cursor        **cursors;
+    struct wl_surface       *pointer_surface;
+    enum   cursor_type      current_cursor;
+    uint32_t                enter_serial;
 };
 
 struct wlContextStruct {
     struct wlContextCommon  cmm;
     struct wl_surface       *wlSurface;
-    struct wl_shell_surface *wlShellSurface;
     struct wl_buffer        *wlBuffer;
     uint32_t                formats;
     cairo_surface_t         *ctx_image;
@@ -68,11 +116,69 @@ struct wlContextStruct {
     struct wl_list          link;
 };
 
-pthread_t thread;
+struct
+hmi_homescreen_srf {
+    uint32_t    id;
+    char        *filePath;
+    uint32_t    color;
+};
+
+struct
+hmi_homescreen_workspace {
+    struct wl_array     launcher_id_array;
+    struct wl_list      link;
+};
+
+struct
+hmi_homescreen_launcher {
+    uint32_t            icon_surface_id;
+    uint32_t            workspace_id;
+    char*               icon;
+    char*               path;
+    struct wl_list      link;
+    struct wl_array     setid_window_titles;
+};
+
+struct
+hmi_homescreen_setting {
+    struct hmi_homescreen_srf  background;
+    struct hmi_homescreen_srf  panel;
+    struct hmi_homescreen_srf  tiling;
+    struct hmi_homescreen_srf  sidebyside;
+    struct hmi_homescreen_srf  fullscreen;
+    struct hmi_homescreen_srf  random;
+    struct hmi_homescreen_srf  home;
+    struct hmi_homescreen_srf  workspace_background;
+    char*                      surface_creator_path;
+
+    struct wl_list workspace_list;
+    struct wl_list launcher_list;
+
+    char     *cursor_theme;
+    int32_t  cursor_size;
+};
 
 volatile int gRun = 0;
 
-extern struct hmi_controller_setting g_HmiSetting;
+static void *
+fail_on_null(void *p, size_t size, char* file, int32_t line)
+{
+    if (size && !p) {
+        fprintf(stderr, "%s(%d) %zd: out of memory\n", file, line, size);
+        exit(EXIT_FAILURE);
+    }
+
+    return p;
+}
+
+static void *
+mem_alloc(size_t size, char* file, int32_t line)
+{
+    return fail_on_null(calloc(1, size), size, file, line);
+}
+
+#define MEM_ALLOC(s) mem_alloc((s),__FILE__,__LINE__)
+#define ARRAY_LENGTH(a) (sizeof (a) / sizeof (a)[0])
 
 /*****************************************************************************
  *  Event Handler
@@ -108,15 +214,59 @@ getIdOfWlSurface(struct wlContextCommon *pCtx, struct wl_surface *wlSurface)
 }
 
 static void
+set_pointer_image(struct wlContextCommon *pCtx, uint32_t index)
+{
+    if (!pCtx->wlPointer ||
+        !pCtx->cursors) {
+        return;
+    }
+
+    if (CURSOR_BLANK == pCtx->current_cursor) {
+        wl_pointer_set_cursor(pCtx->wlPointer, pCtx->enter_serial,
+                              NULL, 0, 0);
+        return;
+    }
+
+    struct wl_cursor *cursor = pCtx->cursors[pCtx->current_cursor];
+    if (!cursor) {
+        return;
+    }
+
+    if (cursor->image_count <= index) {
+        fprintf(stderr, "cursor index out of range\n");
+        return;
+    }
+
+    struct wl_cursor_image *image = cursor->images[index];
+    struct wl_buffer *buffer = wl_cursor_image_get_buffer(image);
+
+    if (!buffer) {
+        return;
+    }
+
+    wl_pointer_set_cursor(pCtx->wlPointer, pCtx->enter_serial,
+                          pCtx->pointer_surface,
+                          image->hotspot_x, image->hotspot_y);
+
+    wl_surface_attach(pCtx->pointer_surface, buffer, 0, 0);
+
+    wl_surface_damage(pCtx->pointer_surface, 0, 0,
+                      image->width, image->height);
+
+    wl_surface_commit(pCtx->pointer_surface);
+}
+
+static void
 PointerHandleEnter(void* data, struct wl_pointer* wlPointer, uint32_t serial,
                    struct wl_surface* wlSurface, wl_fixed_t sx, wl_fixed_t sy)
 {
-   (void)wlPointer;
-   (void)serial;
+    (void)wlPointer;
+    (void)serial;
 
     struct wlContextCommon *pCtx = data;
+    pCtx->enter_serial = serial;
     pCtx->enterSurface = wlSurface;
-
+    set_pointer_image(pCtx, 0);
 #ifdef _DEBUG
     printf("ENTER PointerHandleEnter: x(%d), y(%d)\n", sx, sy);
 #endif
@@ -150,7 +300,10 @@ PointerHandleMotion(void* data, struct wl_pointer* wlPointer, uint32_t time,
 #endif
 }
 
-
+/**
+ * if a surface assigned as launcher receives touch-off event, invoking
+ * ivi-application which configured in weston.ini with path to binary.
+ */
 extern char **environ; /*defied by libc */
 
 static pid_t execute_process(char* path, char *argv[])
@@ -172,8 +325,9 @@ static pid_t execute_process(char* path, char *argv[])
     return pid;
 }
 
-static void execute_ivi_surface_creator(
-    char* path, pid_t pid, char* window_title, uint32_t id_surface)
+static void
+execute_ivi_surface_creator(char* path, pid_t pid,
+                            char* window_title, uint32_t id_surface)
 {
     char arg1[255] = {0};
     char arg3[255] = {0};
@@ -191,12 +345,13 @@ static void execute_ivi_surface_creator(
 }
 
 static int32_t
-launcher_button(uint32_t surfaceId)
+launcher_button(uint32_t surfaceId, struct wl_list *launcher_list,
+                char* surface_creator)
 {
     pid_t pid = 0;
-    struct hmi_controller_launcher *launcher = NULL;
+    struct hmi_homescreen_launcher *launcher = NULL;
 
-    wl_list_for_each(launcher, &g_HmiSetting.launcher_list, link) {
+    wl_list_for_each(launcher, launcher_list, link) {
         if (surfaceId != launcher->icon_surface_id) {
             continue;
         }
@@ -205,7 +360,7 @@ launcher_button(uint32_t surfaceId)
         pid = execute_process(launcher->path, argv);
 
         if (0 < pid &&
-            g_HmiSetting.surface_creator_path &&
+            surface_creator &&
             launcher->setid_window_titles.size) {
                 uint32_t count = 0;
                 char** title = NULL;
@@ -216,7 +371,7 @@ launcher_button(uint32_t surfaceId)
                     uint32_t id_surface = pid | 0x80000000 | (count << 24);
                     count++;
                     execute_ivi_surface_creator(
-                        g_HmiSetting.surface_creator_path, pid, *title, id_surface);
+                        surface_creator, pid, *title, id_surface);
                 }
         }
 
@@ -226,15 +381,20 @@ launcher_button(uint32_t surfaceId)
     return 0;
 }
 
+/**
+ * is-method to identify a surface set as launcher in workspace or workspace
+ * itself. This is-method is used to decide whether request;
+ * ivi_hmi_controller_workspace_control is sent or not.
+ */
 static int32_t
-isWorkspaceSurface(uint32_t id)
+isWorkspaceSurface(uint32_t id, struct hmi_homescreen_setting *hmi_setting)
 {
-    if (id == g_HmiSetting.workspace_background.id) {
+    if (id == hmi_setting->workspace_background.id) {
         return 1;
     }
 
-    struct hmi_controller_launcher *launcher = NULL;
-    wl_list_for_each(launcher, &g_HmiSetting.launcher_list, link) {
+    struct hmi_homescreen_launcher *launcher = NULL;
+    wl_list_for_each(launcher, &hmi_setting->launcher_list, link) {
         if (id == launcher->icon_surface_id) {
             return 1;
         }
@@ -243,6 +403,45 @@ isWorkspaceSurface(uint32_t id)
     return 0;
 }
 
+/**
+ * Decide which request is sent to hmi-controller
+ */
+static void
+touch_up(struct ivi_hmi_controller *hmi_ctrl, uint32_t id_surface,
+         int32_t *is_home_on, struct hmi_homescreen_setting* hmi_setting)
+{
+    if (launcher_button(id_surface, &hmi_setting->launcher_list,
+        hmi_setting->surface_creator_path)) {
+        *is_home_on = 0;
+        ivi_hmi_controller_home(hmi_ctrl, IVI_HMI_CONTROLLER_HOME_OFF);
+    } else if (id_surface == hmi_setting->tiling.id) {
+        ivi_hmi_controller_switch_mode(
+                    hmi_ctrl, IVI_HMI_CONTROLLER_LAYOUT_MODE_TILING);
+    } else if (id_surface == hmi_setting->sidebyside.id) {
+        ivi_hmi_controller_switch_mode(
+                    hmi_ctrl, IVI_HMI_CONTROLLER_LAYOUT_MODE_SIDE_BY_SIDE);
+    } else if (id_surface == hmi_setting->fullscreen.id) {
+        ivi_hmi_controller_switch_mode(
+                    hmi_ctrl, IVI_HMI_CONTROLLER_LAYOUT_MODE_FULL_SCREEN);
+    } else if (id_surface == hmi_setting->random.id) {
+        ivi_hmi_controller_switch_mode(
+                    hmi_ctrl, IVI_HMI_CONTROLLER_LAYOUT_MODE_RANDOM);
+    } else if (id_surface == hmi_setting->home.id) {
+        *is_home_on = !(*is_home_on);
+        if (*is_home_on) {
+            ivi_hmi_controller_home(hmi_ctrl, IVI_HMI_CONTROLLER_HOME_ON);
+        } else {
+            ivi_hmi_controller_home(hmi_ctrl, IVI_HMI_CONTROLLER_HOME_OFF);
+        }
+    }
+}
+
+/**
+ * Even handler of Pointer event. IVI system is usually manipulated by touch
+ * screen. However, some systems also have pointer device.
+ * Release is the same behavior as touch off
+ * Pressed is the same behavior as touch on
+ */
 static void
 PointerHandleButton(void* data, struct wl_pointer* wlPointer, uint32_t serial,
                     uint32_t time, uint32_t button, uint32_t state)
@@ -251,7 +450,7 @@ PointerHandleButton(void* data, struct wl_pointer* wlPointer, uint32_t serial,
     (void)serial;
     (void)time;
     struct wlContextCommon *pCtx = data;
-    struct hmi_controller* hmiCtrl = pCtx->hmiController;
+    struct ivi_hmi_controller *hmi_ctrl = pCtx->hmiCtrl;
 
     if (BTN_RIGHT == button) {
         return;
@@ -261,31 +460,13 @@ PointerHandleButton(void* data, struct wl_pointer* wlPointer, uint32_t serial,
 
     switch (state) {
     case WL_POINTER_BUTTON_STATE_RELEASED:
-
-        if (launcher_button(id_surface)) {
-            hmi_controller_toggle_home(hmiCtrl);
-        } else if (id_surface == g_HmiSetting.tiling.id) {
-            hmi_controller_switch_mode(
-            hmiCtrl, HMI_CONTROLLER_LAYOUT_MODE_TILING);
-        } else if (id_surface == g_HmiSetting.sidebyside.id) {
-            hmi_controller_switch_mode(
-                    hmiCtrl, HMI_CONTROLLER_LAYOUT_MODE_SIDE_BY_SIDE);
-        } else if (id_surface == g_HmiSetting.fullscreen.id) {
-            hmi_controller_switch_mode(
-                    hmiCtrl, HMI_CONTROLLER_LAYOUT_MODE_FULL_SCREEN);
-        } else if (id_surface == g_HmiSetting.random.id) {
-            hmi_controller_switch_mode(
-                    hmiCtrl, HMI_CONTROLLER_LAYOUT_MODE_RANDOM);
-        } else if (id_surface == g_HmiSetting.home.id) {
-            hmi_controller_toggle_home(hmiCtrl);
-        }
-
+        touch_up(hmi_ctrl, id_surface, &pCtx->is_home_on, pCtx->hmi_setting);
         break;
 
     case WL_POINTER_BUTTON_STATE_PRESSED:
 
-        if (isWorkspaceSurface(id_surface)) {
-            hmi_controller_workspace_swipe(hmiCtrl, pCtx->wlSeat, serial);
+        if (isWorkspaceSurface(id_surface, pCtx->hmi_setting)) {
+            ivi_hmi_controller_workspace_control(hmi_ctrl, pCtx->wlSeat, serial);
         }
 
         break;
@@ -315,12 +496,32 @@ static struct wl_pointer_listener pointer_listener = {
     PointerHandleAxis
 };
 
+/**
+ * Even handler of touch event
+ */
 static void
 TouchHandleDown(void *data, struct wl_touch *wlTouch, uint32_t serial, uint32_t time,
                 struct wl_surface *surface, int32_t id, wl_fixed_t x_w, wl_fixed_t y_w)
 {
     struct wlContextCommon *pCtx = data;
-    pCtx->enterSurface = surface;
+    struct ivi_hmi_controller *hmi_ctrl = pCtx->hmiCtrl;
+
+    if (0 == id){
+        pCtx->enterSurface = surface;
+    }
+
+    const uint32_t id_surface = getIdOfWlSurface(pCtx, pCtx->enterSurface);
+
+    /**
+     * When touch down happens on surfaces of workspace, ask hmi-controller to start
+     * control workspace to select page of workspace.
+     * After sending seat to hmi-controller by ivi_hmi_controller_workspace_control,
+     * hmi-controller-homescreen doesn't receive any event till hmi-controller sends
+     * back it.
+     */
+    if (isWorkspaceSurface(id_surface, pCtx->hmi_setting)) {
+        ivi_hmi_controller_workspace_control(hmi_ctrl, pCtx->wlSeat, serial);
+    }
 }
 
 static void
@@ -330,28 +531,15 @@ TouchHandleUp(void *data, struct wl_touch *wlTouch, uint32_t serial, uint32_t ti
     (void)serial;
     (void)time;
     struct wlContextCommon *pCtx = data;
-    struct hmi_controller* hmiCtrl = pCtx->hmiController;
+    struct ivi_hmi_controller *hmi_ctrl = pCtx->hmiCtrl;
 
     const uint32_t id_surface = getIdOfWlSurface(pCtx, pCtx->enterSurface);
 
+    /**
+     * triggering event according to touch-up happening on which surface.
+     */
     if (id == 0){
-        if (launcher_button(id_surface)) {
-            hmi_controller_toggle_home(hmiCtrl);
-        } else if (id_surface == g_HmiSetting.tiling.id) {
-            hmi_controller_switch_mode(
-            hmiCtrl, HMI_CONTROLLER_LAYOUT_MODE_TILING);
-        } else if (id_surface == g_HmiSetting.sidebyside.id) {
-            hmi_controller_switch_mode(
-                    hmiCtrl, HMI_CONTROLLER_LAYOUT_MODE_SIDE_BY_SIDE);
-        } else if (id_surface == g_HmiSetting.fullscreen.id) {
-            hmi_controller_switch_mode(
-                    hmiCtrl, HMI_CONTROLLER_LAYOUT_MODE_FULL_SCREEN);
-        } else if (id_surface == g_HmiSetting.random.id) {
-            hmi_controller_switch_mode(
-                    hmiCtrl, HMI_CONTROLLER_LAYOUT_MODE_RANDOM);
-        } else if (id_surface == g_HmiSetting.home.id) {
-            hmi_controller_toggle_home(hmiCtrl);
-        }
+        touch_up(hmi_ctrl, id_surface, &pCtx->is_home_on, pCtx->hmi_setting);
     }
 }
 
@@ -379,6 +567,9 @@ static struct wl_touch_listener touch_listener = {
     TouchHandleCancel,
 };
 
+/**
+ * Handler of capabilities
+ */
 static void
 seat_handle_capabilities(void* data, struct wl_seat* seat, uint32_t caps)
 {
@@ -388,16 +579,18 @@ seat_handle_capabilities(void* data, struct wl_seat* seat, uint32_t caps)
     struct wl_pointer* wlPointer = p_wlCtx->wlPointer;
     struct wl_touch* wlTouch = p_wlCtx->wlTouch;
 
-    if ((caps & WL_SEAT_CAPABILITY_POINTER) && !wlPointer){
-        wlPointer = wl_seat_get_pointer(wlSeat);
-        wl_pointer_set_user_data(wlPointer, data);
-        wl_pointer_add_listener(wlPointer, &pointer_listener, data);
-    } else
-    if (!(caps & WL_SEAT_CAPABILITY_POINTER) && wlPointer){
-        wl_pointer_destroy(wlPointer);
-        wlPointer = NULL;
+    if (p_wlCtx->hmi_setting->cursor_theme) {
+        if ((caps & WL_SEAT_CAPABILITY_POINTER) && !wlPointer){
+            wlPointer = wl_seat_get_pointer(wlSeat);
+            wl_pointer_set_user_data(wlPointer, data);
+            wl_pointer_add_listener(wlPointer, &pointer_listener, data);
+        } else
+        if (!(caps & WL_SEAT_CAPABILITY_POINTER) && wlPointer){
+            wl_pointer_destroy(wlPointer);
+            wlPointer = NULL;
+        }
+        p_wlCtx->wlPointer = wlPointer;
     }
-    p_wlCtx->wlPointer = wlPointer;
 
     if ((caps & WL_SEAT_CAPABILITY_TOUCH) && !wlTouch){
         wlTouch = wl_seat_get_touch(wlSeat);
@@ -415,27 +608,43 @@ static struct wl_seat_listener seat_Listener = {
     seat_handle_capabilities,
 };
 
+/**
+ * Registration of event
+ * This event is received when hmi-controller server finished controlling
+ * workspace.
+ */
 static void
-hmi_controller_workspace_end_swipe(void *data,
-                                   struct hmi_controller *hmi_ctrl,
-                                   uint32_t is_swipe)
+ivi_hmi_controller_workspace_end_control(void *data,
+                                     struct ivi_hmi_controller *hmi_ctrl,
+                                     int32_t is_controlled)
 {
-    if (is_swipe) {
+    if (is_controlled) {
         return;
     }
 
     struct wlContextCommon *pCtx = data;
     const uint32_t id_surface = getIdOfWlSurface(pCtx, pCtx->enterSurface);
 
-    if (launcher_button(id_surface)) {
-        hmi_controller_toggle_home(hmi_ctrl);
+    /**
+     * During being controlled by hmi-controller, any input event is not
+     * notified. So when control ends with touch up, it invokes launcher
+     * if up event happens on a launcher surface.
+     *
+     */
+    if (launcher_button(id_surface, &pCtx->hmi_setting->launcher_list,
+                        pCtx->hmi_setting->surface_creator_path)) {
+        pCtx->is_home_on = 0;
+        ivi_hmi_controller_home(hmi_ctrl, IVI_HMI_CONTROLLER_HOME_OFF);
     }
 }
 
-static const struct hmi_controller_listener hmi_controller_listener = {
-    hmi_controller_workspace_end_swipe
+static const struct ivi_hmi_controller_listener hmi_controller_listener = {
+    ivi_hmi_controller_workspace_end_control
 };
 
+/**
+ * Registration of interfaces
+ */
 static void
 registry_handle_global(void* data, struct wl_registry* registry, uint32_t name,
                        const char *interface, uint32_t version)
@@ -453,10 +662,6 @@ registry_handle_global(void* data, struct wl_registry* registry, uint32_t name,
             wl_shm_add_listener(p_wlCtx->wlShm, &shm_listenter, p_wlCtx);
             break;
         }
-        if (!strcmp(interface, "wl_shell")) {
-            p_wlCtx->wlShell = wl_registry_bind(registry, name, &wl_shell_interface, 1);
-            break;
-        }
         if (!strcmp(interface, "wl_seat")) {
             p_wlCtx->wlSeat = wl_registry_bind(registry, name, &wl_seat_interface, 1);
             wl_seat_add_listener(p_wlCtx->wlSeat, &seat_Listener, data);
@@ -466,11 +671,11 @@ registry_handle_global(void* data, struct wl_registry* registry, uint32_t name,
             p_wlCtx->iviApplication = wl_registry_bind(registry, name, &ivi_application_interface, 1);
             break;
         }
-        if (!strcmp(interface, "hmi_controller")) {
-            p_wlCtx->hmiController = wl_registry_bind(registry, name, &hmi_controller_interface, 1);
+        if (!strcmp(interface, "ivi_hmi_controller")) {
+            p_wlCtx->hmiCtrl = wl_registry_bind(registry, name, &ivi_hmi_controller_interface, 1);
 
-            if (p_wlCtx->hmiController) {
-                hmi_controller_add_listener(p_wlCtx->hmiController, &hmi_controller_listener, p_wlCtx);
+            if (p_wlCtx->hmiCtrl) {
+                ivi_hmi_controller_add_listener(p_wlCtx->hmiCtrl, &hmi_controller_listener, p_wlCtx);
             }
             break;
         }
@@ -495,9 +700,154 @@ static const struct wl_callback_listener frame_listener = {
     frame_listener_func
 };
 
-/*****************************************************************************
- *  local functions
- ****************************************************************************/
+/*
+ * The following correspondences between file names and cursors was copied
+ * from: https://bugs.kde.org/attachment.cgi?id=67313
+ */
+static const char *bottom_left_corners[] = {
+    "bottom_left_corner",
+    "sw-resize",
+    "size_bdiag"
+};
+
+static const char *bottom_right_corners[] = {
+    "bottom_right_corner",
+    "se-resize",
+    "size_fdiag"
+};
+
+static const char *bottom_sides[] = {
+    "bottom_side",
+    "s-resize",
+    "size_ver"
+};
+
+static const char *grabbings[] = {
+    "grabbing",
+    "closedhand",
+    "208530c400c041818281048008011002"
+};
+
+static const char *left_ptrs[] = {
+    "left_ptr",
+    "default",
+    "top_left_arrow",
+    "left-arrow"
+};
+
+static const char *left_sides[] = {
+    "left_side",
+    "w-resize",
+    "size_hor"
+};
+
+static const char *right_sides[] = {
+    "right_side",
+    "e-resize",
+    "size_hor"
+};
+
+static const char *top_left_corners[] = {
+    "top_left_corner",
+    "nw-resize",
+    "size_fdiag"
+};
+
+static const char *top_right_corners[] = {
+    "top_right_corner",
+    "ne-resize",
+    "size_bdiag"
+};
+
+static const char *top_sides[] = {
+    "top_side",
+    "n-resize",
+    "size_ver"
+};
+
+static const char *xterms[] = {
+    "xterm",
+    "ibeam",
+    "text"
+};
+
+static const char *hand1s[] = {
+    "hand1",
+    "pointer",
+    "pointing_hand",
+    "e29285e634086352946a0e7090d73106"
+};
+
+static const char *watches[] = {
+    "watch",
+    "wait",
+    "0426c94ea35c87780ff01dc239897213"
+};
+
+struct cursor_alternatives {
+    const char **names;
+    size_t count;
+};
+
+static const struct cursor_alternatives cursors[] = {
+    {bottom_left_corners, ARRAY_LENGTH(bottom_left_corners)},
+    {bottom_right_corners, ARRAY_LENGTH(bottom_right_corners)},
+    {bottom_sides, ARRAY_LENGTH(bottom_sides)},
+    {grabbings, ARRAY_LENGTH(grabbings)},
+    {left_ptrs, ARRAY_LENGTH(left_ptrs)},
+    {left_sides, ARRAY_LENGTH(left_sides)},
+    {right_sides, ARRAY_LENGTH(right_sides)},
+    {top_left_corners, ARRAY_LENGTH(top_left_corners)},
+    {top_right_corners, ARRAY_LENGTH(top_right_corners)},
+    {top_sides, ARRAY_LENGTH(top_sides)},
+    {xterms, ARRAY_LENGTH(xterms)},
+    {hand1s, ARRAY_LENGTH(hand1s)},
+    {watches, ARRAY_LENGTH(watches)},
+};
+
+static void
+create_cursors(struct wlContextCommon *cmm)
+{
+    uint32_t i = 0;
+    uint32_t j = 0;
+    struct wl_cursor *cursor = NULL;
+    char* cursor_theme = cmm->hmi_setting->cursor_theme;
+    int32_t cursor_size = cmm->hmi_setting->cursor_size;
+
+    cmm->cursor_theme = wl_cursor_theme_load(cursor_theme, cursor_size, cmm->wlShm);
+
+    cmm->cursors = MEM_ALLOC(ARRAY_LENGTH(cursors) * sizeof(cmm->cursors[0]));
+
+    for (i = 0; i < ARRAY_LENGTH(cursors); i++) {
+        cursor = NULL;
+
+        for (j = 0; !cursor && j < cursors[i].count; ++j) {
+            cursor = wl_cursor_theme_get_cursor(
+                cmm->cursor_theme, cursors[i].names[j]);
+        }
+
+        if (!cursor) {
+            fprintf(stderr, "could not load cursor '%s'\n",
+                    cursors[i].names[0]);
+        }
+
+        cmm->cursors[i] = cursor;
+    }
+}
+
+static void
+destroy_cursors(struct wlContextCommon *cmm)
+{
+    if (cmm->cursor_theme) {
+        wl_cursor_theme_destroy(cmm->cursor_theme);
+    }
+
+    free(cmm->cursors);
+}
+
+/**
+ * Internal method to prepare parts of UI
+ */
 static void
 createShmBuffer(struct wlContextStruct *p_wlCtx)
 {
@@ -556,9 +906,12 @@ createShmBuffer(struct wlContextStruct *p_wlCtx)
 static void
 destroyWLContextCommon(struct wlContextCommon *p_wlCtx)
 {
-    if (p_wlCtx->wlShell) {
-        wl_shell_destroy(p_wlCtx->wlShell);
+    destroy_cursors(p_wlCtx);
+
+    if (p_wlCtx->pointer_surface) {
+        wl_surface_destroy(p_wlCtx->pointer_surface);
     }
+
     if (p_wlCtx->wlCompositor) {
         wl_compositor_destroy(p_wlCtx->wlCompositor);
     }
@@ -576,37 +929,6 @@ destroyWLContextStruct(struct wlContextStruct *p_wlCtx)
         p_wlCtx->ctx_image = NULL;
     }
 }
-static void
-handle_ping(void *data, struct wl_shell_surface *shell_surface,
-            uint32_t serial)
-{
-    (void)data;
-    wl_shell_surface_pong(shell_surface, serial);
-}
-
-static void
-handle_configure(void *data, struct wl_shell_surface *shell_surface,
-                 uint32_t edges, int32_t width, int32_t height)
-{
-    (void)data;
-    (void)shell_surface;
-    (void)edges;
-    (void)width;
-    (void)height;
-}
-
-static void
-handle_popup_done(void *data, struct wl_shell_surface *shell_surface)
-{
-    (void)data;
-    (void)shell_surface;
-}
-
-static const struct wl_shell_surface_listener shell_surface_listener = {
-    handle_ping,
-    handle_configure,
-    handle_popup_done
-};
 
 static int
 createWLContext(struct wlContextStruct *p_wlCtx)
@@ -620,16 +942,9 @@ createWLContext(struct wlContextStruct *p_wlCtx)
         abort();
     }
 
-    p_wlCtx->wlShellSurface = wl_shell_get_shell_surface(p_wlCtx->cmm.wlShell,
-                                                         p_wlCtx->wlSurface);
-
-    wl_shell_surface_add_listener(p_wlCtx->wlShellSurface,
-                                  &shell_surface_listener, p_wlCtx);
 
     createShmBuffer(p_wlCtx);
 
-    wl_shell_surface_set_title(p_wlCtx->wlShellSurface, "");
-    wl_shell_surface_set_toplevel(p_wlCtx->wlShellSurface);
     wl_display_flush(p_wlCtx->cmm.wlDisplay);
     wl_display_roundtrip(p_wlCtx->cmm.wlDisplay);
 
@@ -738,12 +1053,15 @@ create_ivisurfaceFromColor(struct wlContextStruct *p_wlCtx,
     create_ivisurface(p_wlCtx, id_surface, surface);
 }
 
+/**
+ * Internal method to set up UI by using ivi-hmi-controller
+ */
 static void
 create_background(struct wlContextStruct *p_wlCtx, const uint32_t id_surface,
                   const char* imageFile)
 {
     create_ivisurfaceFromFile(p_wlCtx, id_surface, imageFile);
-    hmi_controller_set_background(p_wlCtx->cmm.hmiController, id_surface);
+    ivi_hmi_controller_set_background(p_wlCtx->cmm.hmiCtrl, id_surface);
 }
 
 static void
@@ -751,7 +1069,7 @@ create_panel(struct wlContextStruct *p_wlCtx, const uint32_t id_surface,
              const char* imageFile)
 {
     create_ivisurfaceFromFile(p_wlCtx, id_surface, imageFile);
-    hmi_controller_set_panel(p_wlCtx->cmm.hmiController, id_surface);
+    ivi_hmi_controller_set_panel(p_wlCtx->cmm.hmiCtrl, id_surface);
 }
 
 static void
@@ -759,7 +1077,7 @@ create_button(struct wlContextStruct *p_wlCtx, const uint32_t id_surface,
               const char* imageFile, uint32_t number)
 {
     create_ivisurfaceFromFile(p_wlCtx, id_surface, imageFile);
-    hmi_controller_set_button(p_wlCtx->cmm.hmiController, id_surface, number);
+    ivi_hmi_controller_set_button(p_wlCtx->cmm.hmiCtrl, id_surface, number);
 }
 
 static void
@@ -767,41 +1085,40 @@ create_home_button(struct wlContextStruct *p_wlCtx, const uint32_t id_surface,
                    const char* imageFile)
 {
     create_ivisurfaceFromFile(p_wlCtx, id_surface, imageFile);
-    hmi_controller_set_home_button(p_wlCtx->cmm.hmiController, id_surface);
+    ivi_hmi_controller_set_home_button(p_wlCtx->cmm.hmiCtrl, id_surface);
 }
 
 static void
 create_workspace_background(
-    struct wlContextStruct *p_wlCtx, struct hmi_controller_srfInfo *srfInfo)
+    struct wlContextStruct *p_wlCtx, struct hmi_homescreen_srf *srf)
 {
-    create_ivisurfaceFromColor(p_wlCtx, srfInfo->id, 1, 1, srfInfo->color);
-    hmi_controller_set_workspacebackground(p_wlCtx->cmm.hmiController, srfInfo->id);
+    create_ivisurfaceFromColor(p_wlCtx, srf->id, 1, 1, srf->color);
+    ivi_hmi_controller_set_workspacebackground(p_wlCtx->cmm.hmiCtrl, srf->id);
 }
 
 static int compare_launcher(const void* data1, const void* data2)
 {
-    struct hmi_controller_launcher *launcher1 = *(struct hmi_controller_launcher**)data1;
-    struct hmi_controller_launcher *launcher2 = *(struct hmi_controller_launcher**)data2;
+    struct hmi_homescreen_launcher *launcher1 = *(struct hmi_homescreen_launcher**)data1;
+    struct hmi_homescreen_launcher *launcher2 = *(struct hmi_homescreen_launcher**)data2;
     return launcher1->workspace_id - launcher2->workspace_id;
 }
 
 static void
-create_launchers(struct wlContextCommon *cmm)
+create_launchers(struct wlContextCommon *cmm, struct wl_list *launcher_list)
 {
-    int launcher_count = wl_list_length(&g_HmiSetting.launcher_list);
+    int launcher_count = wl_list_length(launcher_list);
 
     if (0 == launcher_count) {
         return;
     }
 
-    struct hmi_controller_launcher** launchers;
-    launchers = calloc(launcher_count, sizeof(*launchers));
-    assert(launchers);
+    struct hmi_homescreen_launcher** launchers;
+    launchers = MEM_ALLOC(launcher_count * sizeof(*launchers));
 
     int ii = 0;
-    struct hmi_controller_launcher *launcher = NULL;
+    struct hmi_homescreen_launcher *launcher = NULL;
 
-    wl_list_for_each(launcher, &g_HmiSetting.launcher_list, link) {
+    wl_list_for_each(launcher, launcher_list, link) {
         launchers[ii] = launcher;
         ii++;
     }
@@ -825,14 +1142,13 @@ create_launchers(struct wlContextCommon *cmm)
             uint32_t *id = wl_array_add(&surface_ids, sizeof(*id));
             *id = launchers[jj]->icon_surface_id;
 
-            struct wlContextStruct *p_wlCtx = calloc(1, sizeof(*p_wlCtx));
-            assert(p_wlCtx);
+            struct wlContextStruct *p_wlCtx = MEM_ALLOC(sizeof(*p_wlCtx));
             p_wlCtx->cmm = *cmm;
 
             create_ivisurfaceFromFile(p_wlCtx, *id, launchers[jj]->icon);
         }
 
-        hmi_controller_add_launchers(cmm->hmiController, &surface_ids, 256);
+        ivi_hmi_controller_add_launchers(cmm->hmiCtrl, &surface_ids, 256);
         wl_array_release(&surface_ids);
         start = ii + 1;
     }
@@ -845,11 +1161,191 @@ static void sigFunc(int signum)
     gRun = 0;
 }
 
+/*
+ * Add launcher to launcher_list
+ */
+static void
+add_launcher(struct weston_config_section *section, uint32_t icon_surface_id,
+             struct wl_list *launcher_list)
+{
+    struct hmi_homescreen_launcher *launcher = NULL;
+    launcher = MEM_ALLOC(sizeof(*launcher));
+    wl_list_init(&launcher->link);
+    launcher->icon_surface_id = icon_surface_id;
+
+    weston_config_section_get_string(section, "icon", &launcher->icon, NULL);
+    weston_config_section_get_string(section, "path", &launcher->path, NULL);
+    weston_config_section_get_uint(section, "workspace-id", &launcher->workspace_id, 0);
+
+    wl_list_insert(launcher_list->prev, &launcher->link);
+}
+
+/**
+ * Internal method to read out weston.ini to get configuration
+ */
+static void parse_commma_separated_string(char* src, struct wl_array *dst)
+{
+    char *tmp_src = strdup(src);
+    char *sep = ",";
+    char *saveptr = NULL;
+
+    char *tok = strtok_r(tmp_src, sep, &saveptr);
+
+    while (tok) {
+        char** add = wl_array_add(dst, sizeof(*add));
+        assert(add);
+        *add = strdup(tok);
+        assert(*add);
+        tok = strtok_r(NULL, sep, &saveptr);
+    }
+
+    free(tmp_src);
+}
+
+static void parse_window_title_section(char* src, struct wl_array *titles)
+{
+    wl_array_init(titles);
+
+    if (NULL == src) {
+        return;
+    }
+    if (0 == strlen(src)) {
+        char** add = wl_array_add(titles, sizeof(*add));
+        *add = NULL;
+        return;
+    }
+    parse_commma_separated_string(src, titles);
+}
+
+static struct hmi_homescreen_setting*
+hmi_homescreen_setting_create(void)
+{
+    struct hmi_homescreen_setting* setting = MEM_ALLOC(sizeof(*setting));
+
+    wl_list_init(&setting->workspace_list);
+    wl_list_init(&setting->launcher_list);
+
+    struct weston_config *config = NULL;
+    config = weston_config_parse("weston.ini");
+
+    struct weston_config_section *shellSection = NULL;
+    shellSection = weston_config_get_section(config, "ivi-shell", NULL, NULL);
+
+    weston_config_section_get_string(
+            shellSection, "cursor-theme", &setting->cursor_theme, NULL);
+
+    weston_config_section_get_int(shellSection, "cursor-size", &setting->cursor_size, 32);
+
+    uint32_t workspace_layer_id;
+    weston_config_section_get_uint(
+        shellSection, "workspace-layer-id", &workspace_layer_id, 3000);
+
+    weston_config_section_get_string(
+        shellSection, "background-image", &setting->background.filePath,
+        DATADIR "/weston/background.png");
+
+    weston_config_section_get_uint(
+        shellSection, "background-id", &setting->background.id, 1001);
+
+    weston_config_section_get_string(
+        shellSection, "panel-image", &setting->panel.filePath,
+        DATADIR "/weston/panel.png");
+
+    weston_config_section_get_uint(
+        shellSection, "panel-id", &setting->panel.id, 1002);
+
+    weston_config_section_get_string(
+        shellSection, "tiling-image", &setting->tiling.filePath,
+        DATADIR "/weston/tiling.png");
+
+    weston_config_section_get_uint(
+        shellSection, "tiling-id", &setting->tiling.id, 1003);
+
+    weston_config_section_get_string(
+        shellSection, "sidebyside-image", &setting->sidebyside.filePath,
+        DATADIR "/weston/sidebyside.png");
+
+    weston_config_section_get_uint(
+        shellSection, "sidebyside-id", &setting->sidebyside.id, 1004);
+
+    weston_config_section_get_string(
+        shellSection, "fullscreen-image", &setting->fullscreen.filePath,
+        DATADIR "/weston/fullscreen.png");
+
+    weston_config_section_get_uint(
+        shellSection, "fullscreen-id", &setting->fullscreen.id, 1005);
+
+    weston_config_section_get_string(
+        shellSection, "random-image", &setting->random.filePath,
+        DATADIR "/weston/random.png");
+
+    weston_config_section_get_uint(
+        shellSection, "random-id", &setting->random.id, 1006);
+
+    weston_config_section_get_string(
+        shellSection, "home-image", &setting->home.filePath,
+        DATADIR "/weston/home.png");
+
+    weston_config_section_get_uint(
+        shellSection, "home-id", &setting->home.id, 1007);
+
+    weston_config_section_get_uint(
+        shellSection, "workspace-background-color",
+        &setting->workspace_background.color, 0x99000000);
+
+    weston_config_section_get_uint(
+        shellSection, "workspace-background-id",
+        &setting->workspace_background.id, 2001);
+
+    weston_config_section_get_string(
+        shellSection, "ivi-surface-creator-path",
+        &setting->surface_creator_path, "");
+
+    struct weston_config_section *section = NULL;
+    const char *name = NULL;
+
+    uint32_t icon_surface_id = workspace_layer_id + 1;
+
+    while (weston_config_next_section(config, &section, &name)) {
+
+        if (0 == strcmp(name, "ivi-launcher")) {
+
+            struct hmi_homescreen_launcher *launcher = NULL;
+            launcher = MEM_ALLOC(sizeof(*launcher));
+            wl_list_init(&launcher->link);
+            wl_array_init(&launcher->setid_window_titles);
+            launcher->icon_surface_id = icon_surface_id;
+            icon_surface_id++;
+
+            weston_config_section_get_string(section, "icon", &launcher->icon, NULL);
+            weston_config_section_get_string(section, "path", &launcher->path, NULL);
+            weston_config_section_get_uint(section, "workspace-id", &launcher->workspace_id, 0);
+
+            char* window_titles = NULL;
+            weston_config_section_get_string(section, "setid-window-titles", &window_titles, NULL);
+            parse_window_title_section(window_titles, &launcher->setid_window_titles);
+            free(window_titles);
+
+            wl_list_insert(setting->launcher_list.prev, &launcher->link);
+        }
+    }
+
+    weston_config_destroy(config);
+    return setting;
+}
+
+/**
+ * Main thread
+ *
+ * The basic flow are as followed,
+ * 1/ read configuration from weston.ini by hmi_homescreen_setting_create
+ * 2/ draw png file to surface according to configuration of weston.ini and
+ *    set up UI by using ivi-hmi-controller protocol by each create_* method
+ */
 static void*
 client_thread(void *p_ret)
 {
     struct wlContextCommon wlCtxCommon;
-
     struct wlContextStruct wlCtx_BackGround;
     struct wlContextStruct wlCtx_Panel;
     struct wlContextStruct wlCtx_Button_1;
@@ -870,9 +1366,12 @@ client_thread(void *p_ret)
     memset(&wlCtx_HomeButton, 0x00, sizeof(wlCtx_HomeButton));
     memset(&wlCtx_WorkSpaceBackGround, 0x00, sizeof(wlCtx_WorkSpaceBackGround));
     wl_list_init(&launcher_wlCtxList);
-    wlCtxCommon.list_wlContextStruct = calloc(1, sizeof(struct wl_list));
+    wlCtxCommon.list_wlContextStruct = MEM_ALLOC(sizeof(struct wl_list));
     assert(wlCtxCommon.list_wlContextStruct);
     wl_list_init(wlCtxCommon.list_wlContextStruct);
+
+    struct hmi_homescreen_setting *hmi_setting = hmi_homescreen_setting_create();
+    wlCtxCommon.hmi_setting = hmi_setting;
 
     gRun = 1;
 
@@ -889,6 +1388,15 @@ client_thread(void *p_ret)
     wl_display_dispatch(wlCtxCommon.wlDisplay);
     wl_display_roundtrip(wlCtxCommon.wlDisplay);
 
+    if (wlCtxCommon.hmi_setting->cursor_theme) {
+        create_cursors(&wlCtxCommon);
+
+        wlCtxCommon.pointer_surface =
+            wl_compositor_create_surface(wlCtxCommon.wlCompositor);
+
+        wlCtxCommon.current_cursor = CURSOR_LEFT_PTR;
+    }
+
     wlCtx_BackGround.cmm = wlCtxCommon;
     wlCtx_Panel.cmm      = wlCtxCommon;
     wlCtx_Button_1.cmm   = wlCtxCommon;
@@ -899,39 +1407,37 @@ client_thread(void *p_ret)
     wlCtx_WorkSpaceBackGround.cmm = wlCtxCommon;
 
     /* create desktop widgets */
-    create_background(&wlCtx_BackGround, g_HmiSetting.background.id,
-                      g_HmiSetting.background.filePath);
+    create_background(&wlCtx_BackGround, hmi_setting->background.id,
+                      hmi_setting->background.filePath);
 
-    create_panel(&wlCtx_Panel, g_HmiSetting.panel.id,
-                 g_HmiSetting.panel.filePath);
+    create_panel(&wlCtx_Panel, hmi_setting->panel.id,
+                 hmi_setting->panel.filePath);
 
-    create_button(&wlCtx_Button_1, g_HmiSetting.tiling.id,
-                  g_HmiSetting.tiling.filePath, 0);
+    create_button(&wlCtx_Button_1, hmi_setting->tiling.id,
+                  hmi_setting->tiling.filePath, 0);
 
-    create_button(&wlCtx_Button_2, g_HmiSetting.sidebyside.id,
-                  g_HmiSetting.sidebyside.filePath, 1);
+    create_button(&wlCtx_Button_2, hmi_setting->sidebyside.id,
+                  hmi_setting->sidebyside.filePath, 1);
 
-    create_button(&wlCtx_Button_3, g_HmiSetting.fullscreen.id,
-                  g_HmiSetting.fullscreen.filePath, 2);
+    create_button(&wlCtx_Button_3, hmi_setting->fullscreen.id,
+                  hmi_setting->fullscreen.filePath, 2);
 
-    create_button(&wlCtx_Button_4, g_HmiSetting.random.id,
-                  g_HmiSetting.random.filePath, 3);
-
-    create_home_button(&wlCtx_HomeButton, g_HmiSetting.home.id,
-                       g_HmiSetting.home.filePath);
+    create_button(&wlCtx_Button_4, hmi_setting->random.id,
+                  hmi_setting->random.filePath, 3);
 
     create_workspace_background(&wlCtx_WorkSpaceBackGround,
-                        &g_HmiSetting.workspace_background);
+                                &hmi_setting->workspace_background);
 
-    create_launchers(&wlCtxCommon);
+    create_launchers(&wlCtxCommon, &hmi_setting->launcher_list);
 
+    create_home_button(&wlCtx_HomeButton, hmi_setting->home.id,
+                       hmi_setting->home.filePath);
     /* signal handling */
     signal(SIGINT,  sigFunc);
     signal(SIGKILL, sigFunc);
 
     while(gRun) {
-        wl_display_roundtrip(wlCtxCommon.wlDisplay);
-        usleep(5000);
+        wl_display_dispatch(wlCtxCommon.wlDisplay);
     }
 
     struct wlContextStruct* pWlCtxSt = NULL;
@@ -953,6 +1459,7 @@ hmi_client_start(void)
 {
     pthread_attr_t thread_attrs;
     uint32_t ret = 0;
+    pthread_t thread;
 
     pthread_attr_init(&thread_attrs);
     pthread_attr_setdetachstate(&thread_attrs, PTHREAD_CREATE_JOINABLE);

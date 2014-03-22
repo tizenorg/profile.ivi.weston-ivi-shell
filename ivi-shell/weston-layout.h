@@ -20,6 +20,28 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/**
+ * The weston-layout library supports API set of controlling properties of
+ * surface and layer which groups surfaces. An unique ID whose type is integer
+ * is required to create surface and layer. With the unique ID, surface and
+ * layer are identified to control them. The API set consists of APIs to control
+ * properties of surface and layers about followings,
+ * - visibility.
+ * - opacity.
+ * - clipping (x,y,width,height).
+ * - position and size of it to be displayed.
+ * - orientation per 90 degree.
+ * - add or remove surfaces to a layer.
+ * - order of surfaces/layers in layer/screen to be displayed.
+ * - commit to apply property changes.
+ * - notifications of property change.
+ *
+ * Management of surfaces and layers grouping these surfaces are common way in
+ * In-Vehicle Infotainment system, which integrate several domains in one system.
+ * A layer is allocated to a domain in order to control application surfaces
+ * grouped to the layer all together.
+ */
+
 #ifndef _WESTON_LAYOUT_H_
 #define _WESTON_LAYOUT_H_
 
@@ -38,8 +60,8 @@ struct weston_layout_SurfaceProperties
     uint32_t sourceHeight;
     uint32_t origSourceWidth;
     uint32_t origSourceHeight;
-    int32_t destX;
-    int32_t destY;
+    int32_t  destX;
+    int32_t  destY;
     uint32_t destWidth;
     uint32_t destHeight;
     uint32_t orientation;
@@ -66,8 +88,8 @@ struct weston_layout_LayerProperties
     uint32_t sourceHeight;
     uint32_t origSourceWidth;
     uint32_t origSourceHeight;
-    int32_t destX;
-    int32_t destY;
+    int32_t  destX;
+    int32_t  destY;
     uint32_t destWidth;
     uint32_t destHeight;
     uint32_t orientation;
@@ -99,36 +121,38 @@ enum weston_layout_notification_mask {
     IVI_NOTIFICATION_VISIBILITY  = IVI_BIT(7),
     IVI_NOTIFICATION_PIXELFORMAT = IVI_BIT(8),
     IVI_NOTIFICATION_ADD         = IVI_BIT(9),
+    IVI_NOTIFICATION_REMOVE      = IVI_BIT(10),
     IVI_NOTIFICATION_ALL         = 0xFFFF
 };
 
-typedef void(*layerPropertyNotificationFunc)(struct weston_layout_layer *layout_layer,
+typedef void(*layerPropertyNotificationFunc)(struct weston_layout_layer *ivilayer,
                                             struct weston_layout_LayerProperties*,
                                             enum weston_layout_notification_mask mask,
                                             void *userdata);
 
-typedef void(*surfacePropertyNotificationFunc)(struct weston_layout_surface *layout_surface,
+typedef void(*surfacePropertyNotificationFunc)(struct weston_layout_surface *ivisurf,
                                             struct weston_layout_SurfaceProperties*,
                                             enum weston_layout_notification_mask mask,
                                             void *userdata);
 
-typedef void(*layerCreateNotificationFunc)(struct weston_layout_layer *layout_layer,
+typedef void(*layerCreateNotificationFunc)(struct weston_layout_layer *ivilayer,
                                             void *userdata);
 
-typedef void(*layerRemoveNotificationFunc)(struct weston_layout_layer *layout_layer,
+typedef void(*layerRemoveNotificationFunc)(struct weston_layout_layer *ivilayer,
                                             void *userdata);
 
-typedef void(*surfaceCreateNotificationFunc)(struct weston_layout_surface *layout_surface,
+typedef void(*surfaceCreateNotificationFunc)(struct weston_layout_surface *ivisurf,
                                             void *userdata);
 
-typedef void(*surfaceRemoveNotificationFunc)(struct weston_layout_surface *layout_surface,
+typedef void(*surfaceRemoveNotificationFunc)(struct weston_layout_surface *ivisurf,
                                             void *userdata);
 
-typedef void(*surfaceConfigureNotificationFunc)(struct weston_layout_surface *layout_surface,
+typedef void(*surfaceConfigureNotificationFunc)(struct weston_layout_surface *ivisurf,
                                             void *userdata);
 
 /**
- * \brief initialize weston-layout
+ * \brief to be called by ivi-shell in order to set initail view of
+ * weston_surface.
  */
 struct weston_view *
 weston_layout_get_weston_view(struct weston_layout_surface *surface);
@@ -181,7 +205,7 @@ weston_layout_setNotificationConfigureSurface(surfaceConfigureNotificationFunc c
  * \return -1 if the client can not call the method on the service.
  */
 uint32_t
-weston_layout_getIdOfSurface(struct weston_layout_surface *layout_surface);
+weston_layout_getIdOfSurface(struct weston_layout_surface *ivisurf);
 
 /**
  * \brief get id of layer from weston_layout_layer
@@ -191,7 +215,7 @@ weston_layout_getIdOfSurface(struct weston_layout_surface *layout_surface);
  * \return -1 if the client can not call the method on the service.
  */
 uint32_t
-weston_layout_getIdOfLayer(struct weston_layout_layer *layout_layer);
+weston_layout_getIdOfLayer(struct weston_layout_layer *ivilayer);
 
 /**
  * \brief get weston_layout_layer from id of layer
@@ -230,7 +254,7 @@ weston_layout_getScreenFromId(uint32_t id_screen);
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_getScreenResolution(struct weston_layout_screen *layout_screen,
+weston_layout_getScreenResolution(struct weston_layout_screen *iviscrn,
                                   uint32_t *pWidth,
                                   uint32_t *pHeight);
 
@@ -241,7 +265,7 @@ weston_layout_getScreenResolution(struct weston_layout_screen *layout_screen,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceAddNotification(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceAddNotification(struct weston_layout_surface *ivisurf,
                                      surfacePropertyNotificationFunc callback,
                                      void *userdata);
 
@@ -252,7 +276,7 @@ weston_layout_surfaceAddNotification(struct weston_layout_surface *layout_surfac
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceRemoveNotification(struct weston_layout_surface *layout_surface);
+weston_layout_surfaceRemoveNotification(struct weston_layout_surface *ivisurf);
 
 /**
  * \brief Create a surface
@@ -265,10 +289,23 @@ weston_layout_surfaceCreate(struct weston_surface *wl_surface,
                             uint32_t id_surface);
 
 /**
+ * \brief Set the native content of an application to be used as surface content.
+ *        If wl_surface is NULL, remove the native content of a surface
+ *
+ * \return  0 if the method call was successful
+ * \return -1 if the client can not call the method on the service.
+ */
+int32_t
+weston_layout_surfaceSetNativeContent(struct weston_surface *wl_surface,
+                                      uint32_t width,
+                                      uint32_t height,
+                                      uint32_t id_surface);
+
+/**
  * \brief initialize weston_layout_surface dest/source width and height
  */
 void
-weston_layout_surfaceConfigure(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceConfigure(struct weston_layout_surface *ivisurf,
                                uint32_t width, uint32_t height);
 
 /**
@@ -278,7 +315,7 @@ weston_layout_surfaceConfigure(struct weston_layout_surface *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceRemove(struct weston_layout_surface *layout_surface);
+weston_layout_surfaceRemove(struct weston_layout_surface *ivisurf);
 
 /**
  * \brief Set from which kind of devices the surface can accept input events.
@@ -295,7 +332,7 @@ weston_layout_surfaceRemove(struct weston_layout_surface *layout_surface);
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_UpdateInputEventAcceptanceOn(struct weston_layout_surface *layout_surface,
+weston_layout_UpdateInputEventAcceptanceOn(struct weston_layout_surface *ivisurf,
                                            uint32_t devices,
                                            uint32_t acceptance);
 
@@ -306,7 +343,7 @@ weston_layout_UpdateInputEventAcceptanceOn(struct weston_layout_surface *layout_
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_getPropertiesOfLayer(struct weston_layout_layer *layout_layer,
+weston_layout_getPropertiesOfLayer(struct weston_layout_layer *ivilayer,
                 struct weston_layout_LayerProperties *pLayerProperties);
 
 /**
@@ -335,7 +372,7 @@ weston_layout_getScreens(uint32_t *pLength, weston_layout_screen_ptr **ppArray);
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_getScreensUnderLayer(struct weston_layout_layer *layout_layer,
+weston_layout_getScreensUnderLayer(struct weston_layout_layer *ivilayer,
                                    uint32_t *pLength,
                                    weston_layout_screen_ptr **ppArray);
 
@@ -355,7 +392,7 @@ weston_layout_getLayers(uint32_t *pLength, weston_layout_layer_ptr **ppArray);
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_getLayersOnScreen(struct weston_layout_screen *layout_screen,
+weston_layout_getLayersOnScreen(struct weston_layout_screen *iviscrn,
                                 uint32_t *pLength,
                                 weston_layout_layer_ptr **ppArray);
 
@@ -366,7 +403,7 @@ weston_layout_getLayersOnScreen(struct weston_layout_screen *layout_screen,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_getLayersUnderSurface(struct weston_layout_surface *layout_surface,
+weston_layout_getLayersUnderSurface(struct weston_layout_surface *ivisurf,
                                     uint32_t *pLength,
                                     weston_layout_layer_ptr **ppArray);
 
@@ -386,7 +423,7 @@ weston_layout_getSurfaces(uint32_t *pLength, weston_layout_surface_ptr **ppArray
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_getSurfacesOnLayer(struct weston_layout_layer *layout_layer,
+weston_layout_getSurfacesOnLayer(struct weston_layout_layer *ivilayer,
                                  uint32_t *pLength,
                                  weston_layout_surface_ptr **ppArray);
 
@@ -407,7 +444,7 @@ weston_layout_layerCreateWithDimension(uint32_t id_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerRemove(struct weston_layout_layer *layout_layer);
+weston_layout_layerRemove(struct weston_layout_layer *ivilayer);
 
 /**
  * \brief Get the current type of the layer.
@@ -416,7 +453,7 @@ weston_layout_layerRemove(struct weston_layout_layer *layout_layer);
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerGetType(struct weston_layout_layer *layout_layer,
+weston_layout_layerGetType(struct weston_layout_layer *ivilayer,
                            uint32_t *pLayerType);
 
 /**
@@ -427,7 +464,7 @@ weston_layout_layerGetType(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerSetVisibility(struct weston_layout_layer *layout_layer,
+weston_layout_layerSetVisibility(struct weston_layout_layer *ivilayer,
                                  uint32_t newVisibility);
 
 /**
@@ -438,7 +475,7 @@ weston_layout_layerSetVisibility(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerGetVisibility(struct weston_layout_layer *layout_layer,
+weston_layout_layerGetVisibility(struct weston_layout_layer *ivilayer,
                                  uint32_t *pVisibility);
 
 /**
@@ -448,7 +485,7 @@ weston_layout_layerGetVisibility(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerSetOpacity(struct weston_layout_layer *layout_layer, float opacity);
+weston_layout_layerSetOpacity(struct weston_layout_layer *ivilayer, float opacity);
 
 /**
  * \brief Get the opacity of a layer.
@@ -457,7 +494,7 @@ weston_layout_layerSetOpacity(struct weston_layout_layer *layout_layer, float op
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerGetOpacity(struct weston_layout_layer *layout_layer, float *pOpacity);
+weston_layout_layerGetOpacity(struct weston_layout_layer *ivilayer, float *pOpacity);
 
 /**
  * \brief Set the area of a layer which should be used for the rendering.
@@ -467,7 +504,7 @@ weston_layout_layerGetOpacity(struct weston_layout_layer *layout_layer, float *p
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerSetSourceRectangle(struct weston_layout_layer *layout_layer,
+weston_layout_layerSetSourceRectangle(struct weston_layout_layer *ivilayer,
                                       uint32_t x, uint32_t y,
                                       uint32_t width, uint32_t height);
 
@@ -479,7 +516,7 @@ weston_layout_layerSetSourceRectangle(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerSetDestinationRectangle(struct weston_layout_layer *layout_layer,
+weston_layout_layerSetDestinationRectangle(struct weston_layout_layer *ivilayer,
                                            int32_t x, int32_t y,
                                            uint32_t width, uint32_t height);
 
@@ -490,7 +527,7 @@ weston_layout_layerSetDestinationRectangle(struct weston_layout_layer *layout_la
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerGetDimension(struct weston_layout_layer *layout_layer,
+weston_layout_layerGetDimension(struct weston_layout_layer *ivilayer,
                                 uint32_t *pDimension);
 
 /**
@@ -500,7 +537,7 @@ weston_layout_layerGetDimension(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerSetDimension(struct weston_layout_layer *layout_layer,
+weston_layout_layerSetDimension(struct weston_layout_layer *ivilayer,
                                 uint32_t *pDimension);
 
 /**
@@ -510,7 +547,7 @@ weston_layout_layerSetDimension(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerGetPosition(struct weston_layout_layer *layout_layer,
+weston_layout_layerGetPosition(struct weston_layout_layer *ivilayer,
                                int32_t *pPosition);
 
 /**
@@ -520,7 +557,7 @@ weston_layout_layerGetPosition(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerSetPosition(struct weston_layout_layer *layout_layer,
+weston_layout_layerSetPosition(struct weston_layout_layer *ivilayer,
                                int32_t *pPosition);
 
 /**
@@ -530,7 +567,7 @@ weston_layout_layerSetPosition(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerSetOrientation(struct weston_layout_layer *layout_layer,
+weston_layout_layerSetOrientation(struct weston_layout_layer *ivilayer,
                                   uint32_t orientation);
 
 /**
@@ -540,7 +577,7 @@ weston_layout_layerSetOrientation(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerGetOrientation(struct weston_layout_layer *layout_layer,
+weston_layout_layerGetOrientation(struct weston_layout_layer *ivilayer,
                                   uint32_t *pOrientation);
 
 /**
@@ -550,7 +587,7 @@ weston_layout_layerGetOrientation(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerSetChromaKey(struct weston_layout_layer *layout_layer,
+weston_layout_layerSetChromaKey(struct weston_layout_layer *ivilayer,
                                 uint32_t* pColor);
 
 /**
@@ -560,7 +597,7 @@ weston_layout_layerSetChromaKey(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerSetRenderOrder(struct weston_layout_layer *layout_layer,
+weston_layout_layerSetRenderOrder(struct weston_layout_layer *ivilayer,
                                   struct weston_layout_surface **pSurface,
                                   uint32_t number);
 
@@ -571,7 +608,7 @@ weston_layout_layerSetRenderOrder(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerGetCapabilities(struct weston_layout_layer *layout_layer,
+weston_layout_layerGetCapabilities(struct weston_layout_layer *ivilayer,
                                    uint32_t *pCapabilities);
 
 /**
@@ -601,7 +638,7 @@ weston_layout_surfaceInitialize(struct weston_layout_surface **pSurface);
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceSetVisibility(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceSetVisibility(struct weston_layout_surface *ivisurf,
                                    uint32_t newVisibility);
 
 /**
@@ -612,7 +649,7 @@ weston_layout_surfaceSetVisibility(struct weston_layout_surface *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceGetVisibility(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceGetVisibility(struct weston_layout_surface *ivisurf,
                                    uint32_t *pVisibility);
 
 /**
@@ -622,7 +659,7 @@ weston_layout_surfaceGetVisibility(struct weston_layout_surface *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceSetOpacity(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceSetOpacity(struct weston_layout_surface *ivisurf,
                                 float opacity);
 
 /**
@@ -632,7 +669,7 @@ weston_layout_surfaceSetOpacity(struct weston_layout_surface *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceGetOpacity(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceGetOpacity(struct weston_layout_surface *ivisurf,
                                 float *pOpacity);
 
 /**
@@ -645,7 +682,7 @@ weston_layout_surfaceGetOpacity(struct weston_layout_surface *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_SetKeyboardFocusOn(struct weston_layout_surface *layout_surface);
+weston_layout_SetKeyboardFocusOn(struct weston_layout_surface *ivisurf);
 
 /**
  * \brief Get the indentifier of the surface which hold the keyboard focus
@@ -664,7 +701,7 @@ weston_layout_GetKeyboardFocusSurfaceId(struct weston_layout_surface **pSurfaceI
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceSetDestinationRectangle(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceSetDestinationRectangle(struct weston_layout_surface *ivisurf,
                                              int32_t x, int32_t y,
                                              uint32_t width, uint32_t height);
 
@@ -675,7 +712,7 @@ weston_layout_surfaceSetDestinationRectangle(struct weston_layout_surface *layou
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceSetDimension(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceSetDimension(struct weston_layout_surface *ivisurf,
                                   uint32_t *pDimension);
 
 /**
@@ -685,7 +722,7 @@ weston_layout_surfaceSetDimension(struct weston_layout_surface *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceGetDimension(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceGetDimension(struct weston_layout_surface *ivisurf,
                                   uint32_t *pDimension);
 
 /**
@@ -695,7 +732,7 @@ weston_layout_surfaceGetDimension(struct weston_layout_surface *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceSetPosition(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceSetPosition(struct weston_layout_surface *ivisurf,
                                  int32_t *pPosition);
 
 /**
@@ -705,7 +742,7 @@ weston_layout_surfaceSetPosition(struct weston_layout_surface *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceGetPosition(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceGetPosition(struct weston_layout_surface *ivisurf,
                                  int32_t *pPosition);
 
 /**
@@ -715,7 +752,7 @@ weston_layout_surfaceGetPosition(struct weston_layout_surface *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceSetOrientation(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceSetOrientation(struct weston_layout_surface *ivisurf,
                                     uint32_t orientation);
 
 /**
@@ -725,7 +762,7 @@ weston_layout_surfaceSetOrientation(struct weston_layout_surface *layout_surface
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceGetOrientation(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceGetOrientation(struct weston_layout_surface *ivisurf,
                                     uint32_t *pOrientation);
 
 /**
@@ -735,7 +772,7 @@ weston_layout_surfaceGetOrientation(struct weston_layout_surface *layout_surface
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceGetPixelformat(struct weston_layout_layer *layout_surface,
+weston_layout_surfaceGetPixelformat(struct weston_layout_layer *ivisurf,
                                     uint32_t *pPixelformat);
 
 /**
@@ -745,7 +782,7 @@ weston_layout_surfaceGetPixelformat(struct weston_layout_layer *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceSetChromaKey(struct weston_layout_surface *layout_surface,
+weston_layout_surfaceSetChromaKey(struct weston_layout_surface *ivisurf,
                                   uint32_t* pColor);
 
 /**
@@ -755,7 +792,7 @@ weston_layout_surfaceSetChromaKey(struct weston_layout_surface *layout_surface,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_screenAddLayer(struct weston_layout_screen *layout_screen,
+weston_layout_screenAddLayer(struct weston_layout_screen *iviscrn,
                              struct weston_layout_layer *addlayer);
 
 /**
@@ -765,7 +802,7 @@ weston_layout_screenAddLayer(struct weston_layout_screen *layout_screen,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_screenSetRenderOrder(struct weston_layout_screen *layout_screen,
+weston_layout_screenSetRenderOrder(struct weston_layout_screen *iviscrn,
                                    struct weston_layout_layer **pLayer,
                                    const uint32_t number);
 
@@ -777,7 +814,7 @@ weston_layout_screenSetRenderOrder(struct weston_layout_screen *layout_screen,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_takeScreenshot(struct weston_layout_screen *layout_screen,
+weston_layout_takeScreenshot(struct weston_layout_screen *iviscrn,
                              const char *filename);
 
 /**
@@ -789,7 +826,7 @@ weston_layout_takeScreenshot(struct weston_layout_screen *layout_screen,
  */
 int32_t
 weston_layout_takeLayerScreenshot(const char *filename,
-                                  struct weston_layout_layer *layout_layer);
+                                  struct weston_layout_layer *ivilayer);
 
 /**
  * \brief Take a screenshot of a certain surface
@@ -800,7 +837,7 @@ weston_layout_takeLayerScreenshot(const char *filename,
  */
 int32_t
 weston_layout_takeSurfaceScreenshot(const char *filename,
-                                    struct weston_layout_surface *layout_surface);
+                                    struct weston_layout_surface *ivisurf);
 
 /**
  * \brief Enable or disable a rendering optimization
@@ -827,7 +864,7 @@ weston_layout_GetOptimizationMode(uint32_t id, uint32_t *pMode);
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerAddNotification(struct weston_layout_layer *layout_layer,
+weston_layout_layerAddNotification(struct weston_layout_layer *ivilayer,
                                    layerPropertyNotificationFunc callback,
                                    void *userdata);
 
@@ -838,7 +875,7 @@ weston_layout_layerAddNotification(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerRemoveNotification(struct weston_layout_layer *layout_layer);
+weston_layout_layerRemoveNotification(struct weston_layout_layer *ivilayer);
 
 /**
  * \brief Get the surface properties
@@ -847,7 +884,7 @@ weston_layout_layerRemoveNotification(struct weston_layout_layer *layout_layer);
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_getPropertiesOfSurface(struct weston_layout_surface *layout_surface,
+weston_layout_getPropertiesOfSurface(struct weston_layout_surface *ivisurf,
                 struct weston_layout_SurfaceProperties *pSurfaceProperties);
 
 /**
@@ -857,7 +894,7 @@ weston_layout_getPropertiesOfSurface(struct weston_layout_surface *layout_surfac
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerAddSurface(struct weston_layout_layer *layout_layer,
+weston_layout_layerAddSurface(struct weston_layout_layer *ivilayer,
                               struct weston_layout_surface *addsurf);
 
 /**
@@ -867,7 +904,7 @@ weston_layout_layerAddSurface(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_layerRemoveSurface(struct weston_layout_layer *layout_layer,
+weston_layout_layerRemoveSurface(struct weston_layout_layer *ivilayer,
                                  struct weston_layout_surface *remsurf);
 
 /**
@@ -877,8 +914,8 @@ weston_layout_layerRemoveSurface(struct weston_layout_layer *layout_layer,
  * \return -1 if the client can not call the method on the service.
  */
 int32_t
-weston_layout_surfaceSetSourceRectangle(struct weston_layout_surface *layout_surface,
-                                        int32_t x, int32_t y,
+weston_layout_surfaceSetSourceRectangle(struct weston_layout_surface *ivisurf,
+                                        uint32_t x, uint32_t y,
                                         uint32_t width, uint32_t height);
 
 /**
@@ -889,6 +926,9 @@ weston_layout_surfaceSetSourceRectangle(struct weston_layout_surface *layout_sur
  */
 int32_t
 weston_layout_commitChanges(void);
+
+void
+weston_layout_add_panel_layer(struct weston_layer *panel_layer);
 
 #ifdef __cplusplus
 } /**/

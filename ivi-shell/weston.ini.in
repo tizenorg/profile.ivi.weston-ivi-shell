@@ -1,9 +1,12 @@
 [core]
 shell=ivi-shell.so
-modules=ivi-controller.so,hmi-controller.so
+modules=ivi-shell-ext.so,ivi-controller.so,hmi-controller.so
 
 [ivi-shell]
-desktop-layer-id=1000
+cursor-theme=default
+cursor-size=32
+
+base-layer-id=1000
 workspace-background-layer-id=2000
 workspace-layer-id=3000
 application-layer-id=4000
@@ -27,33 +30,65 @@ workspace-background-id=2001
 
 ivi-surface-creator-path=@abs_top_builddir@/clients/IVISurfaceCreator
 
-[ivi-launcher]
-workspace-id=0
-icon=@abs_top_builddir@/data/icon_ivi_flower.png
-path=@abs_top_builddir@/clients/weston-flower
-setid-window-titles=
+[input-method]
+path=@libexecdir@/weston-keyboard
 
 [ivi-launcher]
 workspace-id=0
-icon=@abs_top_builddir@/data/icon_ivi_clickdot.png
-path=@abs_top_builddir@/clients/weston-clickdot
-setid-window-titles=
+icon=@abs_top_builddir@data/icon_ivi_flower.png
+path=@abs_top_builddir@clients/weston-flower
+setid-window-titles=Flower
 
 [ivi-launcher]
 workspace-id=0
-icon=@abs_top_builddir@/data/icon_ivi_simple-egl.png
-path=@abs_top_builddir@/clients/weston-simple-egl
-setid-window-titles=
+icon=@abs_top_builddir@data/icon_ivi_clickdot.png
+path=@abs_top_builddir@clients/weston-clickdot
+setid-window-titles=Wayland ClickDot
 
 [ivi-launcher]
-workspace-id=0
-icon=@abs_top_builddir@/data/icon_ivi_simple-shm.png
-path=@abs_top_builddir@/clients/weston-simple-shm
-setid-window-titles=
+workspace-id=1
+icon=@abs_top_builddir@data/icon_ivi_simple-egl.png
+path=@abs_top_builddir@clients/weston-simple-egl
+setid-window-titles=simple-egl
 
 [ivi-launcher]
-workspace-id=0
-icon=@abs_top_builddir@/data/icon_ivi_smoke.png
-path=@abs_top_builddir@/clients/weston-smoke
-setid-window-titles=
+workspace-id=1
+icon=@abs_top_builddir@data/icon_ivi_simple-shm.png
+path=@abs_top_builddir@clients/weston-simple-shm
+setid-window-titles=simple-shm
 
+[ivi-launcher]
+workspace-id=2
+icon=@abs_top_builddir@data/icon_ivi_smoke.png
+path=@abs_top_builddir@clients/weston-smoke
+setid-window-titles=smoke
+
+[ivi-launcher]
+workspace-id=3
+icon=@abs_top_builddir@data/icon_ivi_flower.png
+path=@abs_top_builddir@clients/weston-flower
+setid-window-titles=Flower
+
+[ivi-launcher]
+workspace-id=3
+icon=@abs_top_builddir@data/icon_ivi_clickdot.png
+path=@abs_top_builddir@clients/weston-clickdot
+setid-window-titles=Wayland ClickDot
+
+[ivi-launcher]
+workspace-id=3
+icon=@abs_top_builddir@data/icon_ivi_simple-egl.png
+path=@abs_top_builddir@clients/weston-simple-egl
+setid-window-titles=simple-egl
+
+[ivi-launcher]
+workspace-id=3
+icon=@abs_top_builddir@data/icon_ivi_simple-shm.png
+path=@abs_top_builddir@clients/weston-simple-shm
+setid-window-titles=simple-shm
+
+[ivi-launcher]
+workspace-id=3
+icon=@abs_top_builddir@data/icon_ivi_smoke.png
+path=@abs_top_builddir@clients/weston-smoke
+setid-window-titles=smoke

@@ -20,44 +20,17 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <stdbool.h>
+#ifndef _HMI_CONTROLLER_HOMESCREEN_H_
+#define _HMI_CONTROLLER_HOMESCREEN_H_
 
-#include "compositor.h"
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-struct ivi_shell
-{
-    struct wl_resource *resource;
-    struct wl_listener destroy_listener;
+int hmi_client_start(void);
 
-    struct weston_compositor *compositor;
+#ifdef __cplusplus
+} /**/
+#endif /* __cplusplus */
 
-    struct wl_list ivi_surface_list; /* struct ivi_shell_surface::link */
-
-    struct wl_listener show_input_panel_listener;
-    struct wl_listener hide_input_panel_listener;
-    struct wl_listener update_input_panel_listener;
-
-    struct weston_layer input_panel_layer;
-
-    bool locked;
-    bool showing_input_panels;
-
-    struct {
-        struct weston_surface *surface;
-        pixman_box32_t cursor_rectangle;
-    } text_input;
-
-    struct {
-        struct wl_resource *binding;
-        struct wl_list surfaces;
-    } input_panel;
-};
-
-struct weston_view *
-get_default_view(struct weston_surface *surface);
-
-int
-input_panel_setup(struct ivi_shell *shell);
-
-void
-input_panel_destroy(struct ivi_shell *shell);
+#endif /* _HMI_CONTROLLER_HOMESCREEN_H_ */
