@@ -1,5 +1,5 @@
 Name:           weston-ivi-shell
-Version:        0.1.1
+Version:        0.1.3
 Release:        0
 Summary:        Weston IVI Shell
 License:        MIT
@@ -21,6 +21,7 @@ BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(wayland-egl)
 BuildRequires:  pkgconfig(wayland-server)
 BuildRequires:  pkgconfig(xkbcommon) >= 0.3.0
+BuildRequires:  pkgconfig(pangocairo) >= 1.34.0
 Requires:       weston >= 1.4
 
 %description
@@ -60,7 +61,7 @@ cp %{SOURCE1001} .
 %build
 # We only care about the ivi-shell related bits so disable anything
 # unrelated.
-%autogen --disable-static  --disable-libunwind --disable-xwayland --disable-xwayland-test --disable-x11-compositor --disable-rpi-compositor --disable-weston-launch --disable-clients --disable-wcap-tools
+%autogen --disable-static  --disable-libunwind --disable-xwayland --disable-xwayland-test --disable-x11-compositor --disable-rpi-compositor --disable-weston-launch --enable-clients --disable-wcap-tools
 make %{?_smp_mflags}
 
 %install
@@ -72,12 +73,22 @@ install -m 755 clients/weston-simple-egl-ivi %{buildroot}%{_bindir}
 install -m 755 clients/weston-flower-ivi %{buildroot}%{_bindir}
 install -m 755 clients/weston-smoke-ivi %{buildroot}%{_bindir}
 install -m 755 clients/weston-clickdot-ivi %{buildroot}%{_bindir}
-install -m 755 clients/weston-editor-ivi buildroot}%{_bindir}
+install -m 755 clients/weston-editor-ivi %{buildroot}%{_bindir}
 install -m 755 clients/weston-dnd-ivi %{buildroot}%{_bindir}
+install -m 755 clients/weston-simple-shm %{buildroot}%{_bindir}
+install -m 755 clients/weston-simple-egl %{buildroot}%{_bindir}
+install -m 755 clients/weston-flower %{buildroot}%{_bindir}
+install -m 755 clients/weston-smoke %{buildroot}%{_bindir}
+install -m 755 clients/weston-clickdot %{buildroot}%{_bindir}
+install -m 755 clients/weston-editor %{buildroot}%{_bindir}
+install -m 755 clients/weston-dnd %{buildroot}%{_bindir}
+install -m 755 clients/weston-terminal %{buildroot}%{_bindir}
 
 %define weston_config_dir %{_sysconfdir}/xdg/weston
 mkdir -p %{buildroot}%{weston_config_dir}
 install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
+
+%define _unpackaged_files_terminate_build 0
 
 %files
 %manifest %{name}.manifest
@@ -98,7 +109,15 @@ install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
 %_bindir/weston-smoke-ivi
 %_bindir/weston-clickdot-ivi
 %_bindir/weston-dnd-ivi
-%_bindir/weston-weston-editor-ivi
+%_bindir/weston-editor-ivi
+%_bindir/weston-simple-shm
+%_bindir/weston-simple-egl
+%_bindir/weston-flower
+%_bindir/weston-smoke
+%_bindir/weston-clickdot
+%_bindir/weston-editor
+%_bindir/weston-dnd
+%_bindir/weston-terminal
 
 %files config
 %manifest %{name}.manifest
