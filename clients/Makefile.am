@@ -22,7 +22,7 @@ AM_CFLAGS = $(GCC_CFLAGS)
 AM_CPPFLAGS =					\
 	-DDATADIR='"$(datadir)"'		\
 	-DBINDIR='"$(bindir)"'			\
-	$(CLIENT_CFLAGS) $(CAIRO_EGL_CFLAGS)
+	$(CLIENT_CFLAGS) $(CAIRO_EGL_CFLAGS) $(CAIRO_CFLAGS)
 
 if BUILD_SIMPLE_CLIENTS
 simple_clients_programs =			\
@@ -99,7 +99,7 @@ libtoytoolkit_la_SOURCES =			\
 	workspaces-client-protocol.h
 
 libtoytoolkit_la_LIBADD =			\
-	$(CLIENT_LIBS)				\
+	$(CLIENT_LIBS)			\
 	$(CAIRO_EGL_LIBS)			\
 	../shared/libshared-cairo.la -lrt -lm
 
@@ -173,7 +173,6 @@ weston_subsurfaces_CPPFLAGS = $(AM_CPPFLAGS) $(SIMPLE_EGL_CLIENT_CFLAGS)
 weston_subsurfaces_LDADD = libtoytoolkit.la $(SIMPLE_EGL_CLIENT_LIBS) -lm
 endif
 
-if HAVE_PANGO
 pango_programs = weston-editor
 weston_editor_SOURCES = 			\
 	editor.c				\
@@ -181,7 +180,6 @@ weston_editor_SOURCES = 			\
 	text-client-protocol.h
 weston_editor_LDADD = libtoytoolkit.la $(PANGO_LIBS)
 weston_editor_CPPFLAGS = $(AM_CPPFLAGS) $(PANGO_CFLAGS)
-endif
 
 weston_keyboard_SOURCES = 			\
 	keyboard.c				\
@@ -208,6 +206,7 @@ weston_desktop_shell_SOURCES =			\
 	desktop-shell-client-protocol.h		\
 	desktop-shell-protocol.c
 weston_desktop_shell_LDADD = libtoytoolkit.la
+endif
 
 BUILT_SOURCES =					\
 	screenshooter-client-protocol.h		\
@@ -226,7 +225,6 @@ BUILT_SOURCES =					\
 	workspaces-protocol.c
 
 CLEANFILES = $(BUILT_SOURCES)
-endif
 
 if BUILD_FULL_GL_CLIENTS
 full_gl_client_programs = weston-gears
@@ -267,7 +265,7 @@ libivitoytoolkit_la_SOURCES =			\
 libivitoytoolkit_la_CPPFLAGS = $(AM_CPPFLAGS) -DENABLE_IVI_CLIENT
 
 libivitoytoolkit_la_LIBADD =			\
-	$(CLIENT_LIBS)				\
+	$(IVI_SHELL_LIBS)				\
 	$(CAIRO_EGL_LIBS)			\
 	../shared/libshared-cairo.la -lrt -lm
 
@@ -318,7 +316,6 @@ weston_dnd_ivi_SOURCES = dnd.c \
 weston_dnd_ivi_CPPFLAGS = $(AM_CPPFLAGS) -DENABLE_IVI_CLIENT
 weston_dnd_ivi_LDADD = libivitoytoolkit.la
 
-if HAVE_PANGO
 weston_editor_ivi_SOURCES = editor.c		\
 	text-protocol.c				\
 	text-client-protocol.h			\
@@ -326,7 +323,6 @@ weston_editor_ivi_SOURCES = editor.c		\
 	../ivi-shell/ivi-application-client-protocol.h
 weston_editor_ivi_CPPFLAGS = $(AM_CPPFLAGS) $(PANGO_CFLAGS) -DENABLE_IVI_CLIENT
 weston_editor_ivi_LDADD = libivitoytoolkit.la $(PANGO_LIBS)
-endif
 endif
 
 wayland_protocoldir = $(top_srcdir)/protocol
