@@ -1,5 +1,5 @@
 Name:           weston-ivi-shell
-Version:        0.1.3
+Version:        0.1.4
 Release:        0
 Summary:        Weston IVI Shell
 License:        MIT
@@ -68,21 +68,21 @@ make %{?_smp_mflags}
 %make_install
 
 # install example clients
-install -m 755 clients/weston-simple-shm-ivi %{buildroot}%{_bindir}
-install -m 755 clients/weston-simple-egl-ivi %{buildroot}%{_bindir}
-install -m 755 clients/weston-flower-ivi %{buildroot}%{_bindir}
-install -m 755 clients/weston-smoke-ivi %{buildroot}%{_bindir}
-install -m 755 clients/weston-clickdot-ivi %{buildroot}%{_bindir}
-install -m 755 clients/weston-editor-ivi %{buildroot}%{_bindir}
-install -m 755 clients/weston-dnd-ivi %{buildroot}%{_bindir}
-install -m 755 clients/weston-simple-shm %{buildroot}%{_bindir}
-install -m 755 clients/weston-simple-egl %{buildroot}%{_bindir}
-install -m 755 clients/weston-flower %{buildroot}%{_bindir}
-install -m 755 clients/weston-smoke %{buildroot}%{_bindir}
-install -m 755 clients/weston-clickdot %{buildroot}%{_bindir}
-install -m 755 clients/weston-editor %{buildroot}%{_bindir}
-install -m 755 clients/weston-dnd %{buildroot}%{_bindir}
-install -m 755 clients/weston-terminal %{buildroot}%{_bindir}
+mkdir -p %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-simple-shm-ivi %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-simple-egl-ivi %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-flower-ivi %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-smoke-ivi %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-clickdot-ivi %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-editor-ivi %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-dnd-ivi %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-simple-shm %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-simple-egl %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-flower %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-smoke %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-editor %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-dnd %{buildroot}%{_bindir}/ivi/
+install -m 755 clients/weston-terminal %{buildroot}%{_bindir}/ivi/
 
 %define weston_config_dir %{_sysconfdir}/xdg/weston
 mkdir -p %{buildroot}%{weston_config_dir}
@@ -103,21 +103,20 @@ install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
 
 %files clients
 %manifest %{name}.manifest
-%_bindir/weston-simple-shm-ivi
-%_bindir/weston-simple-egl-ivi
-%_bindir/weston-flower-ivi
-%_bindir/weston-smoke-ivi
-%_bindir/weston-clickdot-ivi
-%_bindir/weston-dnd-ivi
-%_bindir/weston-editor-ivi
-%_bindir/weston-simple-shm
-%_bindir/weston-simple-egl
-%_bindir/weston-flower
-%_bindir/weston-smoke
-%_bindir/weston-clickdot
-%_bindir/weston-editor
-%_bindir/weston-dnd
-%_bindir/weston-terminal
+%_bindir/ivi/weston-simple-shm-ivi
+%_bindir/ivi/weston-simple-egl-ivi
+%_bindir/ivi/weston-flower-ivi
+%_bindir/ivi/weston-smoke-ivi
+%_bindir/ivi/weston-clickdot-ivi
+%_bindir/ivi/weston-dnd-ivi
+%_bindir/ivi/weston-editor-ivi
+%_bindir/ivi/weston-simple-shm
+%_bindir/ivi/weston-simple-egl
+%_bindir/ivi/weston-flower
+%_bindir/ivi/weston-smoke
+%_bindir/ivi/weston-editor
+%_bindir/ivi/weston-dnd
+%_bindir/ivi/weston-terminal
 
 %files config
 %manifest %{name}.manifest
