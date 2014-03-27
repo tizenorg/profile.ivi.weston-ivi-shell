@@ -2,6 +2,7 @@
  * Copyright © 2010-2012 Intel Corporation
  * Copyright © 2011-2012 Collabora, Ltd.
  * Copyright © 2013 Raspberry Pi Foundation
+ * Copyright © 2013 DENSO CORPORATION
  *
  * Permission to use, copy, modify, distribute, and sell this software and
  * its documentation for any purpose is hereby granted without fee, provided
@@ -63,7 +64,8 @@ show_input_panels(struct wl_listener *listener, void *data)
 	shell->showing_input_panels = true;
 
 	if (!shell->locked)
-		weston_layout_add_panel_layer(&shell->input_panel_layer);
+		wl_list_insert(&shell->panel_layer.link,
+			       &shell->input_panel_layer.link);
 
 	wl_list_for_each_safe(ipsurf, next,
 			      &shell->input_panel.surfaces, link) {

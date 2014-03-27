@@ -291,9 +291,10 @@ static void
 init_ivi_shell(struct weston_compositor *ec, struct ivi_shell *shell)
 {
     shell->compositor = ec;
-
-    wl_list_init(&ec->layer_list);
     wl_list_init(&shell->ivi_surface_list);
+
+    weston_layer_init(&shell->panel_layer, &ec->cursor_layer.link);
+    weston_layer_init(&shell->input_panel_layer, NULL);
 }
 
 /**
@@ -314,12 +315,11 @@ module_init(struct weston_compositor *ec,
     }
 
     init_ivi_shell(ec, shell);
+
     weston_layout_initWithCompositor(ec);
 
     shell->destroy_listener.notify = shell_destroy;
     wl_signal_add(&ec->destroy_signal, &shell->destroy_listener);
-
-    weston_layer_init(&shell->input_panel_layer, NULL);
 
     if (input_panel_setup(shell) < 0)
         return -1;
