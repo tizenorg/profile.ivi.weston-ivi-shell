@@ -754,6 +754,8 @@ ivi_shell_la_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS) $(IVI_SHELL_CFLAGS)
 ivi_shell_la_SOURCES =				\
 	ivi-shell/ivi-shell.h			\
 	ivi-shell/ivi-shell.c			\
+        ivi-shell/ivi-shell-ext.h               \
+        ivi-shell/ivi-shell-ext.c               \
 	ivi-shell/ivi-layout.h			\
 	ivi-shell/input-panel-ivi.c
 nodist_ivi_shell_la_SOURCES =			\
@@ -794,15 +796,6 @@ nodist_hmi_controller_la_SOURCES =			\
 	protocol/ivi-hmi-controller-server-protocol.h
 
 BUILT_SOURCES += $(nodist_hmi_controller_la_SOURCES)
-
-ivi_shell_ext = ivi-shell-ext.la
-ivi_shell_ext_la_LDFLAGS = -module -avoid-version
-ivi_shell_ext_la_LIBADD = $(COMPOSITOR_LIBS) $(IVI_SHELL_LIBS)
-ivi_shell_ext_la_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS) $(IVI_SHELL_CFLAGS)
-ivi_shell_ext_la_SOURCES =			\
-	ivi-shell/ivi-shell-ext.c					\
-	ivi-shell/ivi-shell-ext.h					\
-	ivi-shell/ivi-layout.h
 
 endif
 
