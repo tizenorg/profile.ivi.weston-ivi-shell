@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 DENSO CORPORATION
+ * Copyright (C) 2014 DENSO CORPORATION
  *
  * Permission to use, copy, modify, distribute, and sell this software and
  * its documentation for any purpose is hereby granted without fee, provided
@@ -20,49 +20,30 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <stdbool.h>
+#ifndef _IVI_SHELL_EXT_H_
+#define _IVI_SHELL_EXT_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 #include "compositor.h"
-
-struct ivi_shell
-{
-	struct wl_listener destroy_listener;
-
-	struct weston_compositor *compositor;
-
-	struct wl_list ivi_surface_list; /* struct ivi_shell_surface::link */
-	struct wl_list client_list;
-
-	struct ivi_layout_interface *ivi_layout;
-
-	struct wl_listener show_input_panel_listener;
-	struct wl_listener hide_input_panel_listener;
-	struct wl_listener update_input_panel_listener;
-
-	struct weston_layer input_panel_layer;
-
-	bool locked;
-	bool showing_input_panels;
-
-	struct {
-		struct weston_surface *surface;
-		pixman_box32_t cursor_rectangle;
-	} text_input;
-
-	struct {
-		struct wl_resource *binding;
-		struct wl_list surfaces;
-	} input_panel;
-};
-
-struct weston_view *
-get_default_view(struct weston_surface *surface);
+#include <wayland-util.h>
+struct shell_surface;
 
 int
-input_panel_setup(struct ivi_shell *shell);
+init_ivi_shell_ext(struct weston_compositor *ec, int *argc, char *argv[]);
 
 void
-input_panel_destroy(struct ivi_shell *shell);
+ivi_shell_get_shell_surfaces(struct wl_array *surfaces);
 
-WL_EXPORT void
-send_wl_shell_info(int32_t pid, const char *window_title);
+uint32_t
+shell_surface_get_process_id(struct shell_surface *surface);
+
+char*
+shell_surface_get_title(struct shell_surface* surface);
+
+struct weston_surface*
+shell_surface_get_surface(struct shell_surface* surface);
+
+#endif

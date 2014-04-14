@@ -157,7 +157,11 @@ westoninclude_HEADERS =				\
 	src/compositor.h			\
 	shared/matrix.h				\
 	shared/config-parser.h			\
-	shared/zalloc.h
+	shared/zalloc.h				\
+	ivi-shell/ivi-layout-export.h		\
+	ivi-shell/ivi-layout-private.h		\
+	ivi-shell/ivi-shell.h			\
+	ivi-shell/ivi-shell-ext.h
 
 if ENABLE_EGL
 module_LTLIBRARIES += gl-renderer.la
@@ -787,6 +791,8 @@ ivi_shell_la_SOURCES =				\
 	ivi-shell/ivi-shell.h			\
 	ivi-shell/ivi-shell.c			\
 	ivi-shell/ivi-layout-private.h		\
+	ivi-shell/ivi-shell-ext.h		\
+	ivi-shell/ivi-shell-ext.c		\
 	ivi-shell/input-panel-ivi.c
 nodist_ivi_shell_la_SOURCES =			\
 	protocol/ivi-application-protocol.c		\
