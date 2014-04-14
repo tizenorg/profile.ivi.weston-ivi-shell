@@ -792,7 +792,9 @@ ivi_shell_la_SOURCES =				\
 	ivi-shell/ivi-shell.h			\
 	ivi-shell/ivi-shell.c			\
 	ivi-shell/ivi-layout-private.h		\
-	ivi-shell/ivi-shell-ext.c		\
+        ivi-shell/ivi-shell-ext.h               \
+        ivi-shell/ivi-shell-ext.c               \
+	ivi-shell/ivi-layout.h			\
 	ivi-shell/input-panel-ivi.c
 nodist_ivi_shell_la_SOURCES =			\
 	protocol/ivi-application-protocol.c		\
