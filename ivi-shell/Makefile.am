@@ -44,7 +44,8 @@ ivi_shell_la_SOURCES =				\
 	input-panel-ivi.c			\
 	weston-layout.h				\
 	ivi-application-protocol.c		\
-	ivi-application-server-protocol.h
+	ivi-application-server-protocol.h	\
+	input-method-server-protocol.h
 
 hmi_controller = hmi-controller.la
 hmi_controller_la_LDFLAGS = -module -avoid-version
@@ -67,7 +68,9 @@ BUILT_SOURCES =					\
 	ivi-application-client-protocol.h	\
 	ivi-hmi-controller-protocol.c		\
 	ivi-hmi-controller-client-protocol.h	\
-	ivi-hmi-controller-server-protocol.h
+	ivi-hmi-controller-server-protocol.h	\
+	input-method-server-protocol.h          \
+	input-method-client-protocol.h
 
 CLEANFILES = $(BUILT_SOURCES)
 
