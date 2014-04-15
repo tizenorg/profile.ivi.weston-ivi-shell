@@ -1,5 +1,5 @@
 Name:           weston-ivi-shell
-Version:        0.1.3
+Version:        0.1.4
 Release:        0
 Summary:        Weston IVI Shell
 License:        MIT
