@@ -383,7 +383,7 @@ AM_CONDITIONAL(BUILD_FULL_GL_CLIENTS,
 AM_CONDITIONAL(BUILD_SUBSURFACES_CLIENT,
 	       [test '(' "x$have_cairo_egl" != "xyes" -o "x$cairo_modules" = "xcairo-glesv2" ')' -a "x$enable_simple_egl_clients" = "xyes"])
 
-AM_CONDITIONAL(ENABLE_DESKTOP_SHELL, true)
+AM_CONDITIONAL(ENABLE_DESKTOP_SHELL, false)
 
 AC_ARG_ENABLE(fullscreen-shell,
               AS_HELP_STRING([--disable-fullscreen-shell],

@@ -42,7 +42,8 @@ AM_CPPFLAGS = 					\
 
 CLEANFILES = weston.ini ivi-shell/weston.ini $(BUILT_SOURCES)
 
-bin_PROGRAMS += weston
+# Do not rebuild weston.  Just use Tizen's Weston package.
+# bin_PROGRAMS += weston
 
 weston_LDFLAGS = -export-dynamic
 weston_CPPFLAGS = $(AM_CPPFLAGS) -DIN_WESTON
@@ -360,13 +361,7 @@ spring_tool_SOURCES =				\
 
 if BUILD_CLIENTS
 
-bin_PROGRAMS += weston-terminal weston-info
-
 libexec_PROGRAMS +=				\
-	weston-desktop-shell			\
-	weston-screenshooter			\
-	weston-keyboard				\
-	weston-simple-im			\
 	weston-ivi-shell-user-interface
 
 demo_clients =					\
@@ -640,16 +635,16 @@ BUILT_SOURCES +=					\
 	protocol/xdg-shell-client-protocol.h
 
 
-westondatadir = $(datadir)/weston
-dist_westondata_DATA =				\
-	data/wayland.svg			\
-	data/pattern.png			\
-	data/terminal.png			\
-	data/border.png				\
-	data/icon_window.png			\
-	data/sign_close.png			\
-	data/sign_maximize.png			\
-	data/sign_minimize.png
+#westondatadir = $(datadir)/weston
+#dist_westondata_DATA =				\
+#	data/wayland.svg			\
+#	data/pattern.png			\
+#	data/terminal.png			\
+#	data/border.png				\
+#	data/icon_window.png			\
+#	data/sign_close.png			\
+#	data/sign_maximize.png			\
+#	data/sign_minimize.png
 
 
 if BUILD_WCAP_TOOLS
@@ -1049,10 +1044,10 @@ EXTRA_DIST +=					\
 	protocol/fullscreen-shell.xml		\
 	protocol/scaler.xml
 
-man_MANS = weston.1 weston.ini.5
+#man_MANS = weston.1 weston.ini.5
 
 if ENABLE_DRM_COMPOSITOR
-man_MANS += weston-drm.7
+#man_MANS += weston-drm.7
 endif
 
 MAN_SUBSTS =								\
