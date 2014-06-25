@@ -42,7 +42,8 @@ AM_CPPFLAGS = 					\
 
 CLEANFILES = weston.ini ivi-shell/weston.ini $(BUILT_SOURCES)
 
-bin_PROGRAMS += weston
+# Do not rebuild weston.  Just use Tizen's Weston package.
+# bin_PROGRAMS += weston
 
 weston_LDFLAGS = -export-dynamic
 weston_CPPFLAGS = $(AM_CPPFLAGS) -DIN_WESTON
@@ -154,7 +155,11 @@ westoninclude_HEADERS =				\
 	src/compositor.h			\
 	shared/matrix.h				\
 	shared/config-parser.h			\
-	shared/zalloc.h
+	shared/zalloc.h				\
+	ivi-shell/ivi-layout-export.h		\
+	ivi-shell/ivi-layout.h			\
+	ivi-shell/ivi-shell.h			\
+	ivi-shell/ivi-layout-transition.h
 
 if ENABLE_EGL
 module_LTLIBRARIES += gl-renderer.la
@@ -360,13 +365,7 @@ spring_tool_SOURCES =				\
 
 if BUILD_CLIENTS
 
-bin_PROGRAMS += weston-terminal weston-info
-
 libexec_PROGRAMS +=				\
-	weston-desktop-shell			\
-	weston-screenshooter			\
-	weston-keyboard				\
-	weston-simple-im			\
 	weston-ivi-shell-user-interface
 
 demo_clients =					\
@@ -640,16 +639,16 @@ BUILT_SOURCES +=					\
 	protocol/xdg-shell-client-protocol.h
 
 
-westondatadir = $(datadir)/weston
-dist_westondata_DATA =				\
-	data/wayland.svg			\
-	data/pattern.png			\
-	data/terminal.png			\
-	data/border.png				\
-	data/icon_window.png			\
-	data/sign_close.png			\
-	data/sign_maximize.png			\
-	data/sign_minimize.png
+#westondatadir = $(datadir)/weston
+#dist_westondata_DATA =				\
+#	data/wayland.svg			\
+#	data/pattern.png			\
+#	data/terminal.png			\
+#	data/border.png				\
+#	data/icon_window.png			\
+#	data/sign_close.png			\
+#	data/sign_maximize.png			\
+#	data/sign_minimize.png
 
 
 if BUILD_WCAP_TOOLS
@@ -732,9 +731,7 @@ ivi_shell_la_LDFLAGS = -module -avoid-version
 ivi_shell_la_LIBADD = $(COMPOSITOR_LIBS) $(IVI_SHELL_LIBS) libshared.la
 ivi_shell_la_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS) $(IVI_SHELL_CFLAGS)
 ivi_shell_la_SOURCES =				\
-	ivi-shell/ivi-shell.h			\
 	ivi-shell/ivi-shell.c			\
-	ivi-shell/ivi-layout.h			\
 	ivi-shell/input-panel-ivi.c
 nodist_ivi_shell_la_SOURCES =			\
 	protocol/ivi-application-protocol.c		\
@@ -748,10 +745,7 @@ ivi_layout_la_LDFLAGS = -module -avoid-version
 ivi_layout_la_LIBADD = $(COMPOSITOR_LIBS) $(IVI_SHELL_LIBS) libshared.la
 ivi_layout_la_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS) $(IVI_SHELL_CFLAGS)
 ivi_layout_la_SOURCES =				\
-	ivi-shell/ivi-layout.h			\
-	ivi-shell/ivi-layout-export.h		\
 	ivi-shell/ivi-layout.c			\
-	ivi-shell/ivi-layout-transition.h	\
 	ivi-shell/ivi-layout-transition.c
 nodist_ivi_layout_la_SOURCES =			\
 	protocol/ivi-application-protocol.c		\
@@ -1049,10 +1043,10 @@ EXTRA_DIST +=					\
 	protocol/fullscreen-shell.xml		\
 	protocol/scaler.xml
 
-man_MANS = weston.1 weston.ini.5
+#man_MANS = weston.1 weston.ini.5
 
 if ENABLE_DRM_COMPOSITOR
-man_MANS += weston-drm.7
+#man_MANS += weston-drm.7
 endif
 
 MAN_SUBSTS =								\

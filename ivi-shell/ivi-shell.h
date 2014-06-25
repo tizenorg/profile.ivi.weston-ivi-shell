@@ -22,7 +22,7 @@
 
 #include <stdbool.h>
 
-#include "compositor.h"
+#include <weston/compositor.h>
 
 struct ivi_shell
 {

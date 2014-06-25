@@ -52,7 +52,7 @@
 #include <linux/input.h>
 #include <cairo.h>
 
-#include "compositor.h"
+#include <weston/compositor.h>
 #include "ivi-layout.h"
 #include "ivi-layout-export.h"
 #include "ivi-layout-private.h"
