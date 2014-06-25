@@ -49,7 +49,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include "compositor.h"
+#include <weston/compositor.h>
 #include "ivi-layout.h"
 
 enum ivi_layout_notification_mask {

@@ -23,7 +23,7 @@
 #ifndef _ivi_layout_PRIVATE_H_
 #define _ivi_layout_PRIVATE_H_
 
-#include "compositor.h"
+#include <weston/compositor.h>
 #include "ivi-layout.h"
 #include "ivi-layout-transition.h"
 
