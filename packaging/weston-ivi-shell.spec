@@ -30,7 +30,7 @@ A reference Weston shell designed for use in IVI systems.
 %package devel
 Summary: Development files for package %{name}
 Group:   Graphics & UI Framework/Development
-Requires:  %{name} = %{version}
+Requires:  %{name} = %{version}-%{release}
 %description devel
 This package provides header files and other developer releated files
 for package %{name}.
@@ -87,6 +87,7 @@ install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
 %defattr(-,root,root)
 %license COPYING
 %_libdir/weston
+%_libexecdir/weston-ivi-shell-user-interface
 
 %files devel
 %manifest %{name}.manifest
@@ -94,6 +95,7 @@ install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
 %_includedir/weston/ivi-layout.h
 %_includedir/weston/ivi-shell.h
 %_includedir/weston/ivi-layout-transition.h
+
 
 %files config
 %manifest %{name}.manifest
