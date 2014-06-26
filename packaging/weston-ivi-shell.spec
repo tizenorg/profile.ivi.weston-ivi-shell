@@ -7,8 +7,8 @@ Group:          Graphics & UI Framework/Wayland Window System
 Url:            https://github.com/ntanibata/weston-ivi-shell/
 Source0:        %name-%version.tar.xz
 Source1:        weston.ini
-Source1001: 	weston-ivi-shell.manifest
-BuildRequires:	autoconf >= 2.64, automake >= 1.11
+Source1001:     weston-ivi-shell.manifest
+BuildRequires:  autoconf >= 2.64, automake >= 1.11
 BuildRequires:  libtool >= 2.2
 BuildRequires:  libjpeg-devel
 BuildRequires:  pkgconfig
@@ -30,7 +30,7 @@ A reference Weston shell designed for use in IVI systems.
 %package devel
 Summary: Development files for package %{name}
 Group:   Graphics & UI Framework/Development
-Requires:  %{name} = %{version}
+Requires:  %{name} = %{version}-%{release}
 %description devel
 This package provides header files and other developer releated files
 for package %{name}.
@@ -79,14 +79,20 @@ make %{?_smp_mflags}
 %define weston_config_dir %{_sysconfdir}/xdg/weston
 mkdir -p %{buildroot}%{weston_config_dir}
 install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
+install -d %{buildroot}/%{_datadir}/weston/
+cp -rfva data/* %{buildroot}/%{_datadir}/weston/
 
 %define _unpackaged_files_terminate_build 0
+
 
 %files
 %manifest %{name}.manifest
 %defattr(-,root,root)
 %license COPYING
 %_libdir/weston
+%_libexecdir/weston-ivi-shell-user-interface
+%_datadir/weston/*
+
 
 %files devel
 %manifest %{name}.manifest
@@ -95,8 +101,8 @@ install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
 %_includedir/weston/ivi-shell.h
 %_includedir/weston/ivi-layout-transition.h
 
+
 %files config
 %manifest %{name}.manifest
 %config %{weston_config_dir}/weston.ini
 
-%changelog
