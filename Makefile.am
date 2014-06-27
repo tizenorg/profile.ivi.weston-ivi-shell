@@ -726,6 +726,12 @@ module_LTLIBRARIES +=				\
 	$(ivi_layout)				\
         $(hmi_controller)
 
+nodist_westoninclude_HEADERS =				\
+	protocol/ivi-application-client-protocol.h	\
+	protocol/ivi-application-server-protocol.h	\
+	protocol/ivi-hmi-controller-client-protocol.h	\
+	protocol/ivi-hmi-controller-server-protocol.h
+
 ivi_shell = ivi-shell.la
 ivi_shell_la_LDFLAGS = -module -avoid-version
 ivi_shell_la_LIBADD = $(COMPOSITOR_LIBS) $(IVI_SHELL_LIBS) libshared.la

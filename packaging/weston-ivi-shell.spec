@@ -100,6 +100,11 @@ cp -rfva data/* %{buildroot}/%{_datadir}/weston/
 %_includedir/weston/ivi-layout.h
 %_includedir/weston/ivi-shell.h
 %_includedir/weston/ivi-layout-transition.h
+%_includedir/weston/ivi-application-client-protocol.h
+%_includedir/weston/ivi-application-server-protocol.h
+%_includedir/weston/ivi-hmi-controller-client-protocol.h
+%_includedir/weston/ivi-hmi-controller-server-protocol.h
+
 
 
 %files config
