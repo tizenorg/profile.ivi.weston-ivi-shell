@@ -76,6 +76,17 @@ make %{?_smp_mflags}
 %install
 %make_install
 
+install -d %{buildroot}/%{_datadir}/%{name}/protocol/
+
+install -m 644 protocol/*.xml \
+    %{buildroot}/%{_datadir}/%{name}/protocol/
+
+install -m 644 protocol/*.h \
+    %{buildroot}/%{_datadir}/%{name}/protocol/
+
+install -m 644 protocol/*.c \
+    %{buildroot}/%{_datadir}/%{name}/protocol/
+
 %define weston_config_dir %{_sysconfdir}/xdg/weston
 mkdir -p %{buildroot}%{weston_config_dir}
 install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
@@ -100,6 +111,7 @@ cp -rfva data/* %{buildroot}/%{_datadir}/weston/
 %_includedir/weston/ivi-layout.h
 %_includedir/weston/ivi-shell.h
 %_includedir/weston/ivi-layout-transition.h
+%{_datadir}/%{name}/protocol/*
 
 
 %files config
