@@ -726,6 +726,7 @@ module_LTLIBRARIES +=				\
 	$(ivi_layout)				\
         $(hmi_controller)
 
+
 ivi_shell = ivi-shell.la
 ivi_shell_la_LDFLAGS = -module -avoid-version
 ivi_shell_la_LIBADD = $(COMPOSITOR_LIBS) $(IVI_SHELL_LIBS) libshared.la
