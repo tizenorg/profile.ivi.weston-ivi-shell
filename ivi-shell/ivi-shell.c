@@ -43,7 +43,6 @@
 #include <limits.h>
 
 #include "ivi-shell.h"
-#include "ivi-shell-ext.h"
 #include "ivi-application-server-protocol.h"
 #include "ivi-layout.h"
 

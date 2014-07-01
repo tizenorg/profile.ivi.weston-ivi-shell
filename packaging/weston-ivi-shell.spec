@@ -70,8 +70,14 @@ cp %{SOURCE1001} .
     --disable-wcap-tools \
     --disable-demo-clients-install \
     --disable-libinput-backend \
-    --disable-fullscreen-shell
-make %{?_smp_mflags}
+    --disable-fullscreen-shell \
+    --enable-ivi-shell \
+    #eol
+
+#make %{?_smp_mflags} V=1
+
+make V=1
+
 
 %install
 %make_install

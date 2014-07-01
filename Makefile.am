@@ -732,7 +732,11 @@ ivi_shell_la_LIBADD = $(COMPOSITOR_LIBS) $(IVI_SHELL_LIBS) libshared.la
 ivi_shell_la_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS) $(IVI_SHELL_CFLAGS)
 ivi_shell_la_SOURCES =				\
 	ivi-shell/ivi-shell.c			\
-	ivi-shell/input-panel-ivi.c
+	ivi-shell/input-panel-ivi.c 		\
+	ivi-shell/ivi-shell-ext.h		\
+	ivi-shell/ivi-shell-ext.c		\
+  #eol
+
 nodist_ivi_shell_la_SOURCES =			\
 	protocol/ivi-application-protocol.c		\
 	protocol/ivi-application-server-protocol.h
