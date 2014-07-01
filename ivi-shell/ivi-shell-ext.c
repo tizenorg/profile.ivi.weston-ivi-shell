@@ -36,7 +36,7 @@
 #include "ivi-shell-ext.h"
 #include "ivi-shell.h"
 #include "compositor.h"
-#include "weston-layout.h"
+//#include "weston-layout.h"
 
 struct ivi_shell_ext;
 
