@@ -24,6 +24,8 @@
 
 #include "compositor.h"
 
+struct ivi_layout_surface;
+
 struct ivi_shell
 {
 	struct wl_listener destroy_listener;
@@ -65,4 +67,4 @@ void
 input_panel_destroy(struct ivi_shell *shell);
 
 WL_EXPORT void
-send_wl_shell_info(int32_t pid, const char *window_title);
+send_wl_shell_info(int32_t pid, const char *window_title, struct weston_surface *surface);
