@@ -107,6 +107,7 @@ struct ivi_layout_LayerProperties
 };
 
 struct ivi_layout_interface {
+	struct weston_surface* (*get_weston_surface)(struct ivi_layout_surface *surface);
 	struct weston_view* (*get_weston_view)(struct ivi_layout_surface *surface);
 	void (*surfaceConfigure)(struct ivi_layout_surface *ivisurf,
 				 uint32_t width, uint32_t height);
