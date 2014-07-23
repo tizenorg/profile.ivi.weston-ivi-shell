@@ -2925,6 +2925,12 @@ ivi_layout_commitChanges(void)
 }
 
 /***called from ivi-shell**/
+static struct weston_surface *
+ivi_layout_get_weston_surface(struct ivi_layout_surface *surface)
+{
+    return (surface != NULL) ? surface->surface : NULL;
+}
+
 static struct weston_view *
 ivi_layout_get_weston_view(struct ivi_layout_surface *surface)
 {
@@ -3176,6 +3182,7 @@ ivi_layout_initWithCompositor(struct weston_compositor *ec)
 
 
 WL_EXPORT struct ivi_layout_interface ivi_layout_interface = {
+	.get_weston_surface = ivi_layout_get_weston_surface,
 	.get_weston_view = ivi_layout_get_weston_view,
 	.surfaceConfigure = ivi_layout_surfaceConfigure,
 	.surfaceSetNativeContent = ivi_layout_surfaceSetNativeContent,
