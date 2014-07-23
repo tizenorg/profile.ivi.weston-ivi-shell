@@ -2597,6 +2597,12 @@ ivi_layout_commit_changes(void)
 }
 
 /***called from ivi-shell**/
+static struct weston_surface *
+ivi_layout_get_weston_surface(struct ivi_layout_surface *surface)
+{
+	return (surface != NULL) ? surface->surface : NULL;
+}
+
 static struct weston_view *
 ivi_layout_get_weston_view(struct ivi_layout_surface *surface)
 {
@@ -2770,7 +2776,9 @@ ivi_layout_surface_add_configured_listener(struct ivi_layout_surface* ivisurf,
 	wl_signal_add(&ivisurf->configured, listener);
 }
 
+
 WL_EXPORT struct ivi_layout_interface ivi_layout_interface = {
+	.get_weston_surface = ivi_layout_get_weston_surface,
 	.get_weston_view = ivi_layout_get_weston_view,
 	.surface_configure = ivi_layout_surface_configure,
 	.surface_create = ivi_layout_surface_create,
