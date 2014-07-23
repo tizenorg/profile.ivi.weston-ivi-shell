@@ -35,10 +35,19 @@ Requires:  %{name} = %{version}-%{release}
 This package provides header files and other developer releated files
 for package %{name}.
 
+%package clients
+Summary: Sample clients for package %{name}
+Group:   Graphics & UI Framework/Development
+Conflicts:   weston-clients
+%description clients
+This package provides a set of example ivi wayland clients useful for
+validating the functionality of wayland with very little dependencies
+on other system components.
+
 %package config
 Summary:    Tizen IVI Weston configuration for package %{name}
 Group:      Automotive/Configuration
-Requires:   weston-clients
+Requires:   weston-ivi-shell-clients
 Requires:   weekeyboard
 Requires:   genivi-shell
 Conflicts:  weston-ivi-config
@@ -55,7 +64,6 @@ cp %{SOURCE1001} .
 # unrelated.
 %autogen \
     --disable-static \
-    --disable-egl \
     --disable-libunwind \
     --disable-xwayland \
     --disable-xwayland-test \
@@ -66,6 +74,7 @@ cp %{SOURCE1001} .
     --disable-wayland-compositor \
     --disable-headless-compositor \
     --disable-weston-launch \
+    --enable-simple-clients \
     --enable-clients \
     --disable-wcap-tools \
     --disable-demo-clients-install \
@@ -75,6 +84,24 @@ make %{?_smp_mflags}
 
 %install
 %make_install
+
+# install example clients
+install -m 755 weston-calibrator %{buildroot}%{_bindir}
+install -m 755 weston-simple-touch %{buildroot}%{_bindir}
+install -m 755 weston-simple-shm %{buildroot}%{_bindir}
+install -m 755 weston-simple-egl %{buildroot}%{_bindir}
+install -m 755 weston-flower %{buildroot}%{_bindir}
+install -m 755 weston-image %{buildroot}%{_bindir}
+install -m 755 weston-cliptest %{buildroot}%{_bindir}
+install -m 755 weston-dnd %{buildroot}%{_bindir}
+install -m 755 weston-editor %{buildroot}%{_bindir}
+install -m 755 weston-smoke %{buildroot}%{_bindir}
+install -m 755 weston-resizor %{buildroot}%{_bindir}
+install -m 755 weston-eventdemo %{buildroot}%{_bindir}
+install -m 755 weston-clickdot %{buildroot}%{_bindir}
+install -m 755 weston-subsurfaces %{buildroot}%{_bindir}
+install -m 755 weston-transformed %{buildroot}%{_bindir}
+install -m 755 weston-fullscreen %{buildroot}%{_bindir}
 
 install -d %{buildroot}/%{_datadir}/%{name}/protocol/
 
@@ -100,10 +127,11 @@ cp -rfva data/* %{buildroot}/%{_datadir}/weston/
 %manifest %{name}.manifest
 %defattr(-,root,root)
 %license COPYING
-%_libdir/weston
+%_libdir/weston/ivi-shell.so
+%_libdir/weston/ivi-layout.so
+%_libdir/weston/hmi-controller.so
 %_libexecdir/weston-ivi-shell-user-interface
 %_datadir/weston/*
-
 
 %files devel
 %manifest %{name}.manifest
@@ -113,6 +141,24 @@ cp -rfva data/* %{buildroot}/%{_datadir}/weston/
 %_includedir/weston/ivi-layout-transition.h
 %{_datadir}/%{name}/protocol/*
 
+%files clients
+%manifest %{name}.manifest
+%{_bindir}/weston-simple-touch
+%{_bindir}/weston-simple-shm
+%{_bindir}/weston-simple-egl
+%{_bindir}/weston-flower
+%{_bindir}/weston-image
+%{_bindir}/weston-cliptest
+%{_bindir}/weston-dnd
+%{_bindir}/weston-editor
+%{_bindir}/weston-smoke
+%{_bindir}/weston-resizor
+%{_bindir}/weston-eventdemo
+%{_bindir}/weston-clickdot
+%{_bindir}/weston-subsurfaces
+%{_bindir}/weston-transformed
+%{_bindir}/weston-fullscreen
+%{_bindir}/weston-calibrator
 
 %files config
 %manifest %{name}.manifest
