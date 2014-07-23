@@ -293,6 +293,9 @@ ivi_layout_surface_set_transition_duration(
 			uint32_t duration);
 
 struct ivi_layout_interface {
+	struct weston_surface* (*get_weston_surface)(
+				struct ivi_layout_surface *surface);
+
 	struct weston_view *(*get_weston_view)(
 				struct ivi_layout_surface *surface);
 
