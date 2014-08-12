@@ -896,9 +896,6 @@ commit_screen_list(struct ivi_layout *layout)
 
 		/* rebuild view list of layout layer */
 		wl_list_for_each(ivilayer, &iviscrn->order.layer_list, order.link) {
-			if (ivilayer->prop.visibility == false)
-				continue;
-
 			wl_list_for_each(ivisurf, &ivilayer->order.surface_list, order.link) {
 				if (ivisurf->surface == NULL || ivisurf->view == NULL)
 					continue;
@@ -911,15 +908,14 @@ commit_screen_list(struct ivi_layout *layout)
 					weston_layer_entry_insert(&layout->layout_layer.view_list,
 							  &ivisurf->view->layer_link);
 
-					if (!weston_view_is_mapped(ivisurf->view)) {
+					if (!weston_view_is_mapped(ivisurf->view) ||
+					    (ivilayer->event_mask & IVI_NOTIFICATION_ADD)) {
 						weston_view_geometry_dirty(ivisurf->view);
 						weston_view_update_transform(ivisurf->view);
 					}
 				}
 			}
 		}
-
-		break;
 	}
 }
 
