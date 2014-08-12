@@ -376,7 +376,7 @@ init_layer_properties(struct ivi_layout_layer_properties *prop,
 		      int32_t width, int32_t height)
 {
 	memset(prop, 0, sizeof *prop);
-	prop->opacity = wl_fixed_from_double(1.0);
+	prop->opacity = 1.0;
 	prop->source_width = width;
 	prop->source_height = height;
 	prop->dest_width = width;
@@ -387,7 +387,7 @@ static void
 init_surface_properties(struct ivi_layout_surface_properties *prop)
 {
 	memset(prop, 0, sizeof *prop);
-	prop->opacity = wl_fixed_from_double(1.0);
+	prop->opacity = 1.0;
 }
 
 /**
@@ -397,8 +397,8 @@ static void
 update_opacity(struct ivi_layout_layer *ivilayer,
 	       struct ivi_layout_surface *ivisurf)
 {
-	double layer_alpha = wl_fixed_to_double(ivilayer->prop.opacity);
-	double surf_alpha  = wl_fixed_to_double(ivisurf->prop.opacity);
+	double layer_alpha = ivilayer->prop.opacity;
+	double surf_alpha  = ivisurf->prop.opacity;
 
 	if ((ivilayer->event_mask & IVI_NOTIFICATION_OPACITY) ||
 	    (ivisurf->event_mask  & IVI_NOTIFICATION_OPACITY)) {
