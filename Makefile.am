@@ -8,7 +8,7 @@ BUILT_SOURCES =
 
 DISTCHECK_CONFIGURE_FLAGS = --disable-setuid-install
 
-EXTRA_DIST = weston.ini.in ivi-shell/weston.ini.in
+EXTRA_DIST = weston.ini.in
 
 weston.ini : $(srcdir)/weston.ini.in
 	$(AM_V_GEN)$(SED) \
@@ -17,14 +17,7 @@ weston.ini : $(srcdir)/weston.ini.in
 		-e 's|@libexecdir[@]|$(libexecdir)|g' \
 		$< > $@
 
-ivi-shell/weston.ini : $(srcdir)/ivi-shell/weston.ini.in
-	$(AM_V_GEN)$(SED) \
-		-e 's|@bindir[@]|$(bindir)|g' \
-		-e 's|@abs_top_builddir[@]|$(abs_top_builddir)|g' \
-		-e 's|@libexecdir[@]|$(libexecdir)|g' \
-		$< > $@
-
-all-local : weston.ini ivi-shell/weston.ini
+all-local : weston.ini
 
 AM_CFLAGS = $(GCC_CFLAGS)
 
@@ -40,10 +33,9 @@ AM_CPPFLAGS = 					\
 	-DLIBEXECDIR='"$(libexecdir)"'		\
 	-DBINDIR='"$(bindir)"'
 
-CLEANFILES = weston.ini ivi-shell/weston.ini $(BUILT_SOURCES)
+CLEANFILES = weston.ini $(BUILT_SOURCES)
 
-# Do not rebuild weston.  Just use Tizen's Weston package.
-# bin_PROGRAMS += weston
+bin_PROGRAMS += weston
 
 weston_LDFLAGS = -export-dynamic
 weston_CPPFLAGS = $(AM_CPPFLAGS) -DIN_WESTON
@@ -155,11 +147,7 @@ westoninclude_HEADERS =				\
 	src/compositor.h			\
 	shared/matrix.h				\
 	shared/config-parser.h			\
-	shared/zalloc.h				\
-	ivi-shell/ivi-layout-export.h		\
-	ivi-shell/ivi-layout.h			\
-	ivi-shell/ivi-shell.h			\
-	ivi-shell/ivi-layout-transition.h
+	shared/zalloc.h
 
 if ENABLE_EGL
 module_LTLIBRARIES += gl-renderer.la
@@ -365,8 +353,13 @@ spring_tool_SOURCES =				\
 
 if BUILD_CLIENTS
 
+bin_PROGRAMS += weston-terminal weston-info
+
 libexec_PROGRAMS +=				\
-	weston-ivi-shell-user-interface
+	weston-desktop-shell			\
+	weston-screenshooter			\
+	weston-keyboard				\
+	weston-simple-im
 
 demo_clients =					\
 	weston-flower				\
@@ -401,9 +394,7 @@ nodist_weston_simple_shm_SOURCES =		\
 	protocol/xdg-shell-protocol.c		\
 	protocol/xdg-shell-client-protocol.h	\
 	protocol/fullscreen-shell-protocol.c	\
-	protocol/fullscreen-shell-client-protocol.h	\
-	protocol/ivi-application-protocol.c		\
-	protocol/ivi-application-client-protocol.h
+	protocol/fullscreen-shell-client-protocol.h
 weston_simple_shm_CFLAGS = $(AM_CFLAGS) $(SIMPLE_CLIENT_CFLAGS)
 weston_simple_shm_LDADD = $(SIMPLE_CLIENT_LIBS) libshared.la
 
@@ -421,9 +412,7 @@ demo_clients += weston-simple-egl
 weston_simple_egl_SOURCES = clients/simple-egl.c
 nodist_weston_simple_egl_SOURCES =		\
 	protocol/xdg-shell-protocol.c		\
-	protocol/xdg-shell-client-protocol.h		\
-	protocol/ivi-application-protocol.c		\
-	protocol/ivi-application-client-protocol.h
+	protocol/xdg-shell-client-protocol.h
 weston_simple_egl_CFLAGS = $(AM_CFLAGS) $(SIMPLE_EGL_CLIENT_CFLAGS)
 weston_simple_egl_LDADD = $(SIMPLE_EGL_CLIENT_LIBS) -lm
 endif
@@ -442,9 +431,7 @@ nodist_libtoytoolkit_la_SOURCES =			\
 	protocol/workspaces-protocol.c			\
 	protocol/workspaces-client-protocol.h		\
 	protocol/xdg-shell-protocol.c			\
-	protocol/xdg-shell-client-protocol.h		\
-	protocol/ivi-application-protocol.c		\
-	protocol/ivi-application-client-protocol.h
+	protocol/xdg-shell-client-protocol.h
 
 BUILT_SOURCES += $(nodist_libtoytoolkit_la_SOURCES)
 
@@ -583,13 +570,6 @@ nodist_weston_desktop_shell_SOURCES =			\
 weston_desktop_shell_LDADD = libtoytoolkit.la
 weston_desktop_shell_CFLAGS = $(AM_CFLAGS) $(CLIENT_CFLAGS)
 
-weston_ivi_shell_user_interface_SOURCES = clients/ivi-shell-user-interface.c
-nodist_weston_ivi_shell_user_interface_SOURCES =			\
-	protocol/ivi-hmi-controller-client-protocol.h			\
-	protocol/ivi-hmi-controller-protocol.c
-weston_ivi_shell_user_interface_LDADD = libtoytoolkit.la
-weston_ivi_shell_user_interface_CFLAGS = $(AM_CFLAGS) $(CLIENT_CFLAGS)
-
 if BUILD_FULL_GL_CLIENTS
 demo_clients += weston-gears
 weston_gears_SOURCES = clients/gears.c
@@ -639,16 +619,17 @@ BUILT_SOURCES +=					\
 	protocol/xdg-shell-client-protocol.h
 
 
-#westondatadir = $(datadir)/weston
-#dist_westondata_DATA =				\
-#	data/wayland.svg			\
-#	data/pattern.png			\
-#	data/terminal.png			\
-#	data/border.png				\
-#	data/icon_window.png			\
-#	data/sign_close.png			\
-#	data/sign_maximize.png			\
-#	data/sign_minimize.png
+westondatadir = $(datadir)/weston
+dist_westondata_DATA =				\
+	data/wayland.svg			\
+	data/wayland.png			\
+	data/pattern.png			\
+	data/terminal.png			\
+	data/border.png				\
+	data/icon_window.png			\
+	data/sign_close.png			\
+	data/sign_maximize.png			\
+	data/sign_minimize.png
 
 
 if BUILD_WCAP_TOOLS
@@ -718,59 +699,6 @@ nodist_fullscreen_shell_la_SOURCES =			\
 
 BUILT_SOURCES += $(nodist_fullscreen_shell_la_SOURCES)
 endif
-
-if ENABLE_IVI_SHELL
-
-module_LTLIBRARIES +=				\
-	$(ivi_shell)				\
-	$(ivi_layout)				\
-        $(hmi_controller)
-
-ivi_shell = ivi-shell.la
-ivi_shell_la_LDFLAGS = -module -avoid-version
-ivi_shell_la_LIBADD = $(COMPOSITOR_LIBS) $(IVI_SHELL_LIBS) libshared.la
-ivi_shell_la_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS) $(IVI_SHELL_CFLAGS)
-ivi_shell_la_SOURCES =				\
-	ivi-shell/ivi-shell.c			\
-	ivi-shell/input-panel-ivi.c
-nodist_ivi_shell_la_SOURCES =			\
-	protocol/ivi-application-protocol.c		\
-	protocol/ivi-application-server-protocol.h
-
-BUILT_SOURCES += $(nodist_ivi_shell_la_SOURCES)
-
-
-ivi_layout = ivi-layout.la
-ivi_layout_la_LDFLAGS = -module -avoid-version
-ivi_layout_la_LIBADD = $(COMPOSITOR_LIBS) $(IVI_SHELL_LIBS) libshared.la
-ivi_layout_la_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS) $(IVI_SHELL_CFLAGS)
-ivi_layout_la_SOURCES =				\
-	ivi-shell/ivi-layout.c			\
-	ivi-shell/ivi-layout-transition.c
-nodist_ivi_layout_la_SOURCES =			\
-	protocol/ivi-application-protocol.c		\
-	protocol/ivi-application-server-protocol.h
-
-BUILT_SOURCES += $(nodist_ivi_layout_la_SOURCES)
-
-hmi_controller = hmi-controller.la
-hmi_controller_la_LDFLAGS = -module -avoid-version
-hmi_controller_la_LIBADD = $(CLIENT_LIBS) $(IVI_SHELL_LIBS) libshared-cairo.la
-hmi_controller_la_CFLAGS = $(GCC_CFLAGS) $(IVI_SHELL_CFLAGS)
-hmi_controller_la_SOURCES =				\
-	ivi-shell/ivi-layout-export.h			\
-	ivi-shell/hmi-controller.c
-nodist_hmi_controller_la_SOURCES =			\
-	protocol/ivi-application-protocol.c		\
-	protocol/ivi-application-client-protocol.h	\
-	protocol/ivi-hmi-controller-protocol.c		\
-	protocol/ivi-hmi-controller-client-protocol.h	\
-	protocol/ivi-hmi-controller-server-protocol.h
-
-BUILT_SOURCES += $(nodist_hmi_controller_la_SOURCES)
-
-endif
-
 
 if ENABLE_SCREEN_SHARING
 
@@ -1043,10 +971,10 @@ EXTRA_DIST +=					\
 	protocol/fullscreen-shell.xml		\
 	protocol/scaler.xml
 
-#man_MANS = weston.1 weston.ini.5
+man_MANS = weston.1 weston.ini.5
 
 if ENABLE_DRM_COMPOSITOR
-#man_MANS += weston-drm.7
+man_MANS += weston-drm.7
 endif
 
 MAN_SUBSTS =								\
