@@ -88,6 +88,12 @@ struct ivi_layout_layer {
 	} order;
 };
 
+struct ivi_background {
+    struct wl_list link;
+    struct weston_surface *surface;
+    struct weston_view *view;
+};
+
 struct ivi_layout {
 	struct weston_compositor *compositor;
 
@@ -107,10 +113,14 @@ struct ivi_layout {
 	} surface_notification;
 
 	struct weston_layer layout_layer;
+	struct weston_layer background_layer;
+
 	struct wl_signal warning_signal;
 
 	struct ivi_layout_transition_set *transitions;
 	struct wl_list pending_transition_list;
+
+	struct wl_list background_list;
 };
 
 struct ivi_layout *get_instance(void);
@@ -140,7 +150,6 @@ ivi_layout_transition_visibility_on(struct ivi_layout_surface *surface,
 void
 ivi_layout_transition_visibility_off(struct ivi_layout_surface *surface,
 				     uint32_t duration);
-
 
 void
 ivi_layout_transition_move_layer(struct ivi_layout_layer *layer,
