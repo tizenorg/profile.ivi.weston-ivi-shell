@@ -31,12 +31,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <dlfcn.h>
 #include <linux/input.h>
+#include <limits.h>
 
 #include "ivi-shell-ext.h"
 #include "ivi-shell.h"
 #include "compositor.h"
-#include "ivi-layout-export.h"
+#include "ivi-layout-private.h"
 
 struct ivi_shell_ext;
 
@@ -85,6 +87,9 @@ struct ivi_shell_ext
     struct wl_list list_shell_surface;
 };
 
+
+static struct ivi_layout_interface *ivi_layout;
+
 /* ------------------------------------------------------------------------- */
 /* common functions                                                          */
 /* ------------------------------------------------------------------------- */
@@ -110,6 +115,62 @@ configure(struct weston_view *view, float x, float y)
         weston_view_set_position(view, x, y);
         weston_view_update_transform(view);
     }
+}
+
+static void
+layout_surface_poperty_changed(struct ivi_layout_surface *ivisurf,
+                               const struct ivi_layout_surface_properties *prop,
+                               enum ivi_layout_notification_mask mask,
+                               void *userdata)
+{
+    struct shell_surface *shsurf = (struct shell_surface *)userdata;
+
+    if ((mask & IVI_NOTIFICATION_DEST_RECT)) {
+        wl_shell_surface_send_configure(shsurf->resource, 0,
+                                        prop->dest_width, prop->dest_height);
+    }
+}
+
+static void
+subscribe_layout_surface_property_changes(struct shell_surface *shsurf)
+{
+    struct ivi_layout_surface *ivisurf;
+
+    if (shsurf == NULL || shsurf->surface == NULL)
+        return;
+
+    if (ivi_layout == NULL ||
+        ivi_layout->surface_find == NULL ||
+        ivi_layout->surface_add_notification == NULL)
+        return;
+
+    ivisurf = ivi_layout->surface_find(shsurf->surface);
+
+    if (ivisurf != NULL) {
+        ivi_layout->surface_add_notification(ivisurf,
+					     layout_surface_poperty_changed,
+					     (void *)shsurf);
+    }
+}
+
+
+static void
+unsubscribe_layout_surface_property_changes(struct shell_surface *shsurf)
+{
+    struct ivi_layout_surface *ivisurf;
+
+    if (shsurf == NULL || shsurf->surface == NULL)
+        return;
+
+    if (ivi_layout == NULL ||
+        ivi_layout->surface_find == NULL ||
+        ivi_layout->surface_remove_notification == NULL)
+        return;
+
+    ivisurf = ivi_layout->surface_find(shsurf->surface);
+
+    if (ivisurf != NULL)
+        ivi_layout->surface_remove_notification(ivisurf);
 }
 
 /**
@@ -148,6 +209,8 @@ static void
 destroy_shell_surface(struct shell_surface *shsurf)
 {
     wl_list_remove(&shsurf->surface_destroy_listener.link);
+
+    unsubscribe_layout_surface_property_changes(shsurf);
 
 #if 0
     shsurf->surface->configure = NULL;
@@ -390,6 +453,7 @@ shell_weston_surface_destroy(struct wl_listener *listener, void *data)
     lsurf = NULL;
 }
 
+
 static struct shell_surface *
 create_shell_surface(struct ivi_shell_ext *shell,
                      struct wl_client *client,
@@ -436,6 +500,8 @@ create_shell_surface(struct ivi_shell_ext *shell,
     shsurf->surface_destroy_listener.notify = shell_handle_surface_destroy;
     wl_resource_add_destroy_listener(surface->resource,
                                      &shsurf->surface_destroy_listener);
+
+    subscribe_layout_surface_property_changes(shsurf);
 
     return shsurf;
 }
@@ -576,6 +642,8 @@ init_ivi_shell_ext(struct weston_compositor *ec,
                    int *argc, char *argv[])
 {
     struct ivi_shell_ext *shell = get_instance();
+    char ivi_layout_path[PATH_MAX];
+    void *module;
 
     wl_list_init(&shell->list_weston_surface);
     wl_list_init(&shell->list_shell_surface);
@@ -586,6 +654,17 @@ init_ivi_shell_ext(struct weston_compositor *ec,
     if (wl_global_create(ec->wl_display, &wl_shell_interface, 1,
                          shell, bind_shell) == NULL) {
         return -1;
+    }
+
+    snprintf(ivi_layout_path, sizeof ivi_layout_path, "%s/%s", MODULEDIR, "ivi-layout.so");
+    module = dlopen(ivi_layout_path, RTLD_NOW | RTLD_NOLOAD);
+    if (module != NULL)
+        ivi_layout = dlsym(module, "ivi_layout_interface");
+
+    if (ivi_layout == NULL) {
+        weston_log("ivi-shell-ext: layer interface in '%s' is not loaded. "
+                   "geometry hints will not be sent to clients\n",
+                   ivi_layout_path);
     }
 
     return 0;
