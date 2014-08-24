@@ -1390,6 +1390,47 @@ window_get_display(struct window *window)
 	return window->display;
 }
 
+static 	void handle_wl_shell_ping(void *data,
+		         struct wl_shell_surface *wl_shell_surface,
+		         uint32_t serial)
+{
+	struct surface *surface = (struct surface *)data;
+
+	fprintf(stderr, "wl_shell: got ping event\n");
+
+	wl_shell_surface_pong(wl_shell_surface, serial);
+	wl_display_flush(surface->window->display->display);
+}
+
+static void handle_wl_shell_configure(void *data,
+			  struct wl_shell_surface *wl_shell_surface,
+			  uint32_t edges,
+			  int32_t width,
+			  int32_t height)
+{
+	struct surface *surface = (struct surface *)data;
+
+	fprintf(stderr, "wl_shell: got configure event: edges=%u size=%dx%d\n",
+	        edges, width,height);
+
+        window_schedule_resize(surface->window, width, height);
+}
+
+static void handle_wl_shell_popup_done(void *data,
+                          struct wl_shell_surface *wl_shell_surface)
+{
+	(void)data;
+	(void)wl_shell_surface;
+
+	fprintf(stderr, "wl_shell: got popup done event\n");
+}
+
+static const struct wl_shell_surface_listener wl_shell_surface_listener = {
+    handle_wl_shell_ping,
+    handle_wl_shell_configure,
+    handle_wl_shell_popup_done,
+};
+
 static void
 handle_ivi_surface_configure(void *data, struct ivi_surface *ivi_surface,
                              int32_t width, int32_t height)
@@ -1428,6 +1469,9 @@ surface_create_surface(struct surface *surface, uint32_t flags)
 			if (surface->window->shell_surface == NULL)
 				fprintf(stderr, "could not obtain shell_surface\n");
 			else {
+				wl_shell_surface_add_listener(surface->window->shell_surface,
+				                              &wl_shell_surface_listener,
+				                              surface);
 				if (surface->window->title) {
 					wl_shell_surface_set_title(surface->window->shell_surface,
 					                           surface->window->title);
@@ -3963,9 +4007,9 @@ window_get_shadow_margin(struct window *window)
 }
 
 static void
-handle_surface_configure(void *data, struct xdg_surface *xdg_surface,
-			 int32_t width, int32_t height,
-			 struct wl_array *states, uint32_t serial)
+handle_xdg_surface_configure(void *data, struct xdg_surface *xdg_surface,
+			     int32_t width, int32_t height,
+			     struct wl_array *states, uint32_t serial)
 {
 	struct window *window = data;
 	uint32_t *p;
@@ -4032,15 +4076,15 @@ handle_surface_configure(void *data, struct xdg_surface *xdg_surface,
 }
 
 static void
-handle_surface_delete(void *data, struct xdg_surface *xdg_surface)
+handle_xdg_surface_delete(void *data, struct xdg_surface *xdg_surface)
 {
 	struct window *window = data;
 	window_close(window);
 }
 
 static const struct xdg_surface_listener xdg_surface_listener = {
-	handle_surface_configure,
-	handle_surface_delete,
+	handle_xdg_surface_configure,
+	handle_xdg_surface_delete,
 };
 
 static void
