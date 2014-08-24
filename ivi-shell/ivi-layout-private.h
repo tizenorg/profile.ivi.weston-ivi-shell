@@ -320,6 +320,14 @@ struct ivi_layout_interface {
 				struct weston_surface *wl_surface,
 				uint32_t id_surface);
 
+	struct ivi_layout_surface* (*surface_find)(struct weston_surface *wl_surface);
+
+	int32_t (*surface_add_notification)(struct ivi_layout_surface *ivisurf,
+					    surface_property_notification_func callback,
+					    void *userdata);
+
+	int32_t (*surface_remove_notification)(struct ivi_layout_surface *ivisurf);
+
 	void (*init_with_compositor)(struct weston_compositor *ec);
 
 	int32_t (*get_surface_dimension)(
