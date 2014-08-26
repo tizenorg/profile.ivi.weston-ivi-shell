@@ -2893,15 +2893,39 @@ ivi_layout_surfaceConfigure(struct ivi_layout_surface *ivisurf,
                                int32_t width, int32_t height)
 {
     struct ivi_layout *layout = get_instance();
+    int needs_commit;
 
     ivisurf->surface->width_from_buffer  = width;
     ivisurf->surface->height_from_buffer = height;
 
     if (ivisurf->prop.sourceWidth == 0 || ivisurf->prop.sourceHeight == 0) {
-        ivisurf->pending.prop.sourceWidth = width;
-        ivisurf->pending.prop.sourceHeight = height;
         ivisurf->prop.sourceWidth = width;
         ivisurf->prop.sourceHeight = height;
+    }
+
+    if (width != ivisurf->pending.prop.sourceWidth ||
+        height != ivisurf->pending.prop.sourceHeight)
+    {
+        /*
+         * This is quick fix for resizing buffers and will reset zooming
+         * TODO: replace this with some more complex code that tries to
+         *       preserve the zooming ratio and relative position
+         */
+        ivisurf->pending.prop.sourceX = 0;
+        ivisurf->pending.prop.sourceY = 0;
+        ivisurf->pending.prop.sourceWidth = width;
+        ivisurf->pending.prop.sourceHeight = height;
+
+        needs_commit = (ivisurf->event_mask == 0) ? 1 : 0;
+
+        ivisurf->event_mask |= IVI_NOTIFICATION_SOURCE_RECT;
+
+        weston_log("resizing source rectangle of surface %u to %dx%d (%s)\n",
+                   ivisurf->id_surface, width,height,
+                   needs_commit ? "commiting it" : "no commit");
+
+        if (needs_commit)
+            ivi_layout_commitChanges();
     }
 
     wl_signal_emit(&layout->surface_notification.configure_changed, ivisurf);
