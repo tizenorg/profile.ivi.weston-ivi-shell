@@ -1,3 +1,14 @@
+Code-Review+1: Mikko Ylinen <mikko.ylinen@intel.com>
+Code-Review+1: Janos Kovacs <jankovac503@gmail.com>
+Verified+1: Janos Kovacs <jankovac503@gmail.com>
+Code-Review+1: Ismo Puustinen <ismo.puustinen@intel.com>
+Code-Review+2: Philippe Coval <philippe.coval@open.eurogiciel.org>
+Submitted-by: Philippe Coval <philippe.coval@open.eurogiciel.org>
+Submitted-at: Thu, 28 Aug 2014 04:53:40 -0700
+Reviewed-on: https://review.tizen.org/gerrit/26560
+Project: profile/ivi/weston-ivi-shell
+Branch: refs/heads/tizen
+
 Reviewed-on: https://review.tizen.org/gerrit/26560
 Project: profile/ivi/weston-ivi-shell
 Branch: refs/heads/tizen
