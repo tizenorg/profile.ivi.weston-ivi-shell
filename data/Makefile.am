@@ -3,13 +3,6 @@ westondatadir = $(datadir)/weston
 dist_westondata_DATA =				\
 	wayland.svg				\
 	$(wayland_icon_png)			\
-	pattern.png				\
-	terminal.png				\
-	border.png				\
-	icon_window.png				\
-	sign_close.png				\
-	sign_maximize.png			\
-	sign_minimize.png			\
 	background.png				\
 	tiling.png				\
 	fullscreen.png				\
