@@ -384,7 +384,7 @@ fade_view_user_frame(struct ivi_layout_transition *transition)
     const double current = time_to_nowpos(transition);
     const float alpha = private_data->start_alpha + (private_data->end_alpha - private_data->start_alpha)*current;
 
-    ivi_layout_surfaceSetOpacity(surface, wl_fixed_from_double(alpha));
+    ivi_layout_surfaceSetOpacity(surface, alpha);
     ivi_layout_surfaceSetVisibility(surface, 1);
 }
 
@@ -484,7 +484,7 @@ ivi_layout_transition_visibility_on(struct ivi_layout_surface* surface,
 
         const struct store_alpha* user_data = transition->user_data;
         struct fade_view_data* data = transition->private_data;
-        data->start_alpha = wl_fixed_to_double(start_alpha);
+        data->start_alpha = start_alpha;
         data->end_alpha = user_data->alpha;
         return;
     }
@@ -503,7 +503,7 @@ ivi_layout_transition_visibility_on(struct ivi_layout_surface* surface,
 
     create_visibility_transition(surface,
                                  0.0, // start_alpha
-                                 wl_fixed_to_double(dest_alpha),
+                                 dest_alpha,
                                  user_data,
                                  visibility_on_transition_destroy,
                                  duration);
@@ -517,7 +517,7 @@ visibility_off_transition_destroy(struct ivi_layout_transition* transition)
     ivi_layout_surfaceSetVisibility(data->surface, 0);
 
     struct store_alpha* user_data = transition->user_data;
-    ivi_layout_surfaceSetOpacity(data->surface, wl_fixed_from_double(user_data->alpha));
+    ivi_layout_surfaceSetOpacity(data->surface, user_data->alpha);
 
     free(data);
     transition->private_data = NULL;
@@ -545,7 +545,7 @@ ivi_layout_transition_visibility_off(struct ivi_layout_surface* surface,
         ivi_layout_surfaceGetOpacity(surface, &start_alpha);
 
         struct fade_view_data* data = transition->private_data;
-        data->start_alpha = wl_fixed_to_double(start_alpha);
+        data->start_alpha = start_alpha;
         data->end_alpha = 0;
         return;
     }
@@ -557,7 +557,7 @@ ivi_layout_transition_visibility_off(struct ivi_layout_surface* surface,
     user_data->alpha = wl_fixed_to_double(start_alpha);
 
     create_visibility_transition(surface,
-                                 wl_fixed_to_double(start_alpha),
+                                 start_alpha,
                                  0.0f, // dest_alpha
                                  user_data,
                                  visibility_off_transition_destroy,
