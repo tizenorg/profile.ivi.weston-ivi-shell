@@ -430,7 +430,7 @@ fade_view_user_frame(struct ivi_layout_transition *transition)
 	const double alpha = fade->start_alpha +
 		(fade->end_alpha - fade->start_alpha) * current;
 
-	ivi_layout_surface_set_opacity(surface, wl_fixed_from_double(alpha));
+	ivi_layout_surface_set_opacity(surface, alpha);
 	ivi_layout_surface_set_visibility(surface, true);
 }
 
@@ -518,16 +518,14 @@ ivi_layout_transition_visibility_on(struct ivi_layout_surface *surface,
 {
 	struct ivi_layout_transition *transition;
 	bool is_visible = ivi_layout_surface_get_visibility(surface);
-	wl_fixed_t dest_alpha = ivi_layout_surface_get_opacity(surface);
+	double dest_alpha = ivi_layout_surface_get_opacity(surface);
 	struct store_alpha *user_data = NULL;
-	wl_fixed_t start_alpha = 0.0;
 	struct fade_view_data *data = NULL;
 
 	transition = get_transition_from_type_and_id(
 					IVI_LAYOUT_TRANSITION_VIEW_FADE,
 					surface);
 	if (transition) {
-		start_alpha = ivi_layout_surface_get_opacity(surface);
 		user_data = transition->user_data;
 		data = transition->private_data;
 
@@ -535,7 +533,7 @@ ivi_layout_transition_visibility_on(struct ivi_layout_surface *surface,
 		transition->time_duration = duration;
 		transition->destroy_func = visibility_on_transition_destroy;
 
-		data->start_alpha = wl_fixed_to_double(start_alpha);
+		data->start_alpha = dest_alpha;
 		data->end_alpha = user_data->alpha;
 		return;
 	}
@@ -549,11 +547,11 @@ ivi_layout_transition_visibility_on(struct ivi_layout_surface *surface,
 		return;
 	}
 
-	user_data->alpha = wl_fixed_to_double(dest_alpha);
+	user_data->alpha = dest_alpha;
 
 	create_visibility_transition(surface,
 				     0.0, // start_alpha
-				     wl_fixed_to_double(dest_alpha),
+				     dest_alpha,
 				     user_data,
 				     visibility_on_transition_destroy,
 				     duration);
@@ -567,8 +565,7 @@ visibility_off_transition_destroy(struct ivi_layout_transition *transition)
 
 	ivi_layout_surface_set_visibility(data->surface, false);
 
-	ivi_layout_surface_set_opacity(data->surface,
-				       wl_fixed_from_double(user_data->alpha));
+	ivi_layout_surface_set_opacity(data->surface, user_data->alpha);
 
 	free(data);
 	transition->private_data = NULL;
@@ -582,7 +579,7 @@ ivi_layout_transition_visibility_off(struct ivi_layout_surface *surface,
 				     uint32_t duration)
 {
 	struct ivi_layout_transition *transition;
-	wl_fixed_t start_alpha = ivi_layout_surface_get_opacity(surface);
+	double start_alpha = ivi_layout_surface_get_opacity(surface);
 	struct store_alpha* user_data = NULL;
 	struct fade_view_data* data = NULL;
 
@@ -596,7 +593,7 @@ ivi_layout_transition_visibility_off(struct ivi_layout_surface *surface,
 		transition->time_duration = duration;
 		transition->destroy_func = visibility_off_transition_destroy;
 
-		data->start_alpha = wl_fixed_to_double(start_alpha);
+		data->start_alpha = start_alpha;
 		data->end_alpha = 0;
 		return;
 	}
@@ -607,10 +604,10 @@ ivi_layout_transition_visibility_off(struct ivi_layout_surface *surface,
 		return;
 	}
 
-	user_data->alpha = wl_fixed_to_double(start_alpha);
+	user_data->alpha = start_alpha;
 
 	create_visibility_transition(surface,
-				     wl_fixed_to_double(start_alpha),
+				     start_alpha,
 				     0.0, // dest_alpha
 				     user_data,
 				     visibility_off_transition_destroy,
@@ -763,12 +760,11 @@ transition_fade_layer_user_frame(struct ivi_layout_transition *transition)
 	struct fade_layer_data *data = transition->private_data;
 	double alpha = data->start_alpha +
 		(data->end_alpha - data->start_alpha) * current;
-	wl_fixed_t fixed_alpha = wl_fixed_from_double(alpha);
 
 	int32_t is_done = transition->is_done;
 	bool is_visible = !is_done || data->is_fade_in;
 
-	ivi_layout_layer_set_opacity(data->layer, fixed_alpha);
+	ivi_layout_layer_set_opacity(data->layer, alpha);
 	ivi_layout_layer_set_visibility(data->layer, is_visible);
 }
 
@@ -790,7 +786,6 @@ ivi_layout_transition_fade_layer(
 {
 	struct ivi_layout_transition *transition;
 	struct fade_layer_data *data = NULL;
-	wl_fixed_t fixed_opacity = 0.0;
 	double now_opacity = 0.0;
 	double remain = 0.0;
 
@@ -802,8 +797,7 @@ ivi_layout_transition_fade_layer(
 		data = transition->private_data;
 
 		/* FIXME */
-		fixed_opacity = ivi_layout_layer_get_opacity(layer);
-		now_opacity = wl_fixed_to_double(fixed_opacity);
+		now_opacity = ivi_layout_layer_get_opacity(layer);
 		remain = 0.0;
 
 		data->is_fade_in = is_fade_in;

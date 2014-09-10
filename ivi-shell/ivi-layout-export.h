@@ -64,7 +64,7 @@ struct ivi_layout_surface;
 
 struct ivi_layout_surface_properties
 {
-	wl_fixed_t opacity;
+	double  opacity;
 	int32_t source_x;
 	int32_t source_y;
 	int32_t source_width;
@@ -86,7 +86,7 @@ struct ivi_layout_surface_properties
 
 struct ivi_layout_layer_properties
 {
-	wl_fixed_t opacity;
+	double  opacity;
 	int32_t source_x;
 	int32_t source_y;
 	int32_t source_width;
@@ -394,7 +394,7 @@ ivi_layout_layer_set_visibility(struct ivi_layout_layer *ivilayer,
  */
 int32_t
 ivi_layout_layer_set_opacity(struct ivi_layout_layer *ivilayer,
-			     wl_fixed_t opacity);
+			     double opacity);
 
 /**
  * \brief Get the opacity of a layer.
@@ -402,7 +402,7 @@ ivi_layout_layer_set_opacity(struct ivi_layout_layer *ivilayer,
  * \return opacity if the method call was successful
  * \return wl_fixed_from_double(0.0) if the method call was failed
  */
-wl_fixed_t
+double
 ivi_layout_layer_get_opacity(struct ivi_layout_layer *ivilayer);
 
 /**
@@ -504,7 +504,7 @@ ivi_layout_surface_get_visibility(struct ivi_layout_surface *ivisurf);
  */
 int32_t
 ivi_layout_surface_set_opacity(struct ivi_layout_surface *ivisurf,
-			       wl_fixed_t opacity);
+			       double opacity);
 
 /**
  * \brief Get the opacity of a surface.
@@ -512,7 +512,7 @@ ivi_layout_surface_set_opacity(struct ivi_layout_surface *ivisurf,
  * \return opacity if the method call was successful
  * \return wl_fixed_from_double(0.0) if the method call was failed
  */
-wl_fixed_t
+double
 ivi_layout_surface_get_opacity(struct ivi_layout_surface *ivisurf);
 
 
