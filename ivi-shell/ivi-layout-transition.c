@@ -701,12 +701,11 @@ transition_fade_layer_user_frame(struct ivi_layout_transition *transition)
     double current = time_to_nowpos(transition);
     struct fade_layer_data* data = transition->private_data;
     double alpha = data->start_alpha + (data->end_alpha - data->start_alpha) * current;
-    int32_t fixed_alpha = wl_fixed_from_double(alpha);
 
     int32_t is_done = transition->is_done;
     int32_t is_visible = !is_done || data->is_fade_in;
 
-    ivi_layout_layerSetOpacity(data->layer, fixed_alpha);
+    ivi_layout_layerSetOpacity(data->layer, alpha);
     ivi_layout_layerSetVisibility(data->layer, is_visible);
 }
 
@@ -731,15 +730,14 @@ ivi_layout_transition_fade_layer(struct ivi_layout_layer* layer,
         /* transition update */
         struct fade_layer_data* data = transition->private_data;
 
-        float fixed_opacity=0.0; //FIXME
-        ivi_layout_layerGetOpacity(layer, &fixed_opacity);
-        const double now_opacity = wl_fixed_to_double(fixed_opacity);
+        float current_opacity=0.0; //FIXME
+        ivi_layout_layerGetOpacity(layer, &current_opacity);
 
         data->is_fade_in = is_fade_in;
-        data->start_alpha = now_opacity;
+        data->start_alpha = current_opacity;
         data->end_alpha = end_alpha;
 
-        float remain = is_fade_in? 1.0 - now_opacity : now_opacity;
+        float remain = is_fade_in? 1.0 - current_opacity : current_opacity;
         transition->time_start = 0;
         transition->time_elapsed = 0;
         transition->time_duration = duration * remain;
