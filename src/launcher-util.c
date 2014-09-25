@@ -409,7 +409,11 @@ weston_launcher_connect(struct weston_compositor *compositor, int tty,
 					  seat_id, tty);
 		if (r < 0) {
 			launcher->logind = NULL;
+#ifdef ENABLE_SYS_UID
+			if (geteuid() <= 499) { /* 499 = SYS_UID_MAX in login.defs, but it should be parsed */
+#else
 			if (geteuid() == 0) {
+#endif
 				if (setup_tty(launcher, tty) == -1) {
 					free(launcher);
 					return NULL;
