@@ -83,6 +83,12 @@ if test x$enable_xkbcommon = xyes; then
 	COMPOSITOR_MODULES="$COMPOSITOR_MODULES xkbcommon >= 0.3.0"
 fi
 
+AC_ARG_ENABLE(sys-uid, [  --enable-sys-uid],,
+              enable_sys_uid=no)
+if test x$enable_sys_uid = xyes; then
+	AC_DEFINE(ENABLE_SYS_UID, [1], [Allow regular users to launch Weston])
+fi
+
 AC_ARG_ENABLE(setuid-install, [  --enable-setuid-install],,
 	      enable_setuid_install=yes)
 AM_CONDITIONAL(ENABLE_SETUID_INSTALL, test x$enable_setuid_install = xyes)
