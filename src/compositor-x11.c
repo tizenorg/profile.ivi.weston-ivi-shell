@@ -751,7 +751,8 @@ static struct x11_output *
 x11_compositor_create_output(struct x11_compositor *c, int x, int y,
 			     int width, int height, int fullscreen,
 			     int no_input, char *configured_name,
-			     uint32_t transform, int32_t scale)
+			     uint32_t transform, int32_t scale,
+			     int default_output)
 {
 	static const char name[] = "Weston Compositor";
 	static const char class[] = "weston-1\0Weston Compositor";
@@ -905,6 +906,8 @@ x11_compositor_create_output(struct x11_compositor *c, int x, int y,
 		wl_event_loop_add_timer(loop, finish_frame_handler, output);
 
 	wl_list_insert(c->base.output_list.prev, &output->base.link);
+	if (default_output)
+		c->base.default_output = &output->base;
 
 	weston_log("x11 output %dx%d, window id %d\n",
 		   width, height, output->window);
@@ -1488,6 +1491,7 @@ x11_compositor_create(struct wl_display *display,
 	const char *section_name;
 	char *name, *t, *mode;
 	uint32_t transform;
+	int default_output;
 
 	weston_log("initializing x11 backend\n");
 
@@ -1578,10 +1582,14 @@ x11_compositor_create(struct wl_display *display,
 		transform = parse_transform(t, name);
 		free(t);
 
+		weston_config_section_get_int(section, "default_output",
+					      &default_output, 0);
+
 		output = x11_compositor_create_output(c, x, 0,
 						      width, height,
 						      fullscreen, no_input,
-						      name, transform, scale);
+						      name, transform, scale,
+						      default_output);
 		free(name);
 		if (output == NULL)
 			goto err_x11_input;
@@ -1596,7 +1604,8 @@ x11_compositor_create(struct wl_display *display,
 	for (i = output_count; i < count; i++) {
 		output = x11_compositor_create_output(c, x, 0, width, height,
 						      fullscreen, no_input, NULL,
-						      WL_OUTPUT_TRANSFORM_NORMAL, scale);
+						      WL_OUTPUT_TRANSFORM_NORMAL, scale,
+						      default_output);
 		if (output == NULL)
 			goto err_x11_input;
 		x = pixman_region32_extents(&output->base.region)->x2;

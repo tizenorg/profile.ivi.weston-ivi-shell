@@ -630,6 +630,9 @@ shell_configuration(struct desktop_shell *shell)
 struct weston_output *
 get_default_output(struct weston_compositor *compositor)
 {
+	if (compositor->default_output)
+		return compositor->default_output;
+
 	return container_of(compositor->output_list.next,
 			    struct weston_output, link);
 }
