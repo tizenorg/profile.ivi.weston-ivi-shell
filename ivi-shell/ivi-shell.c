@@ -202,6 +202,137 @@ static const struct ivi_surface_interface surface_implementation = {
 	surface_destroy,
 };
 
+static struct shell_surface*
+create_shell_surface(void *shell,
+		     struct weston_surface *weston_surface,
+		     const struct weston_shell_client *client)
+{
+	struct ivi_shell_surface *ivisurf;
+	struct ivi_layout_surface *layout_surface;
+	static uint32_t id_surface = 0xffffffff; // FIXME
+
+	ivisurf = zalloc(sizeof *ivisurf);
+	if (ivisurf == NULL) {
+	weston_log("no memory\n");
+		return NULL;
+	}
+
+	layout_surface = ((struct ivi_shell*)shell)
+		->ivi_layout->surface_create(weston_surface, id_surface);
+
+	wl_list_init(&ivisurf->link);
+	wl_list_insert(&((struct ivi_shell*)shell)->ivi_surface_list, &ivisurf->link);
+
+	ivisurf->shell = shell;
+	ivisurf->id_surface = id_surface;
+
+	ivisurf->resource = NULL;
+	ivisurf->width = 0;
+	ivisurf->height = 0;
+	ivisurf->layout_surface = layout_surface;
+	ivisurf->configured_listener.notify = surface_configure_notify;
+	((struct ivi_shell*)shell)->ivi_layout->add_surface_configured_listener(
+					layout_surface, &ivisurf->configured_listener);
+
+	ivisurf->surface = weston_surface;
+
+	weston_surface->configure = ivi_shell_surface_configure;
+	weston_surface->configure_private = ivisurf;
+
+	id_surface--;
+
+	return NULL;
+}
+
+static struct weston_view*
+get_primary_view(void *shell,
+		 struct shell_surface *shsurf)
+{
+	return NULL;
+}
+
+static void
+set_toplevel(struct shell_surface *shsurf)
+{
+	/*
+	 * non support for ivi-shell
+	 * this shall not be done by client request.
+	 */
+}
+
+static void
+set_transient(struct shell_surface *shsurf,
+	      struct weston_surface *parent,
+	      int x, int y, uint32_t flags)
+{
+	/*
+	 * non support for ivi-shell
+	 * this shall not be done by client request.
+	 */
+}
+
+static void
+set_fullscreen(struct shell_surface *shsurf,
+	       uint32_t method,
+	       uint32_t framerate,
+	       struct weston_output *output)
+{
+	/*
+	 * non support for ivi-shell
+	 * this shall not be done by client request.
+	 */
+}
+
+static void
+set_xwayland(struct shell_surface *shsurf,
+	     int x, int y, uint32_t flags)
+{
+	/*
+	 * non support for ivi-shell
+	 * this shall not be done by client request.
+	 */
+}
+
+static int
+move(struct shell_surface *shsurf, struct weston_seat *ws)
+{
+	/*
+	 * non support for ivi-shell
+	 * this shall not be done by client request.
+	 */
+
+	return 0; // success
+}
+
+static int
+resize(struct shell_surface *shsurf, struct weston_seat *ws, uint32_t edges)
+{
+	/*
+	 * non support for ivi-shell
+	 * this shall not be done by client request.
+	 */
+
+	return 0; // success
+}
+
+static void
+set_title(struct shell_surface *shsurf, const char *title)
+{
+	/*
+	 * title is not supported by ivi-shell
+	 */
+}
+
+static void
+set_window_geometry(struct shell_surface *shsurf,
+		    int32_t x, int32_t y, int32_t width, int32_t height)
+{
+	/*
+	 * non support for ivi-shell
+	 * this shall not be done by client request.
+	 */
+}
+
 /**
  * Request handler for ivi_application.surface_create.
  *
@@ -367,6 +498,18 @@ init_ivi_shell(struct weston_compositor *compositor, struct ivi_shell *shell)
 	wl_list_init(&shell->ivi_surface_list);
 
 	weston_layer_init(&shell->input_panel_layer, NULL);
+
+	compositor->shell_interface.shell = shell;
+	compositor->shell_interface.create_shell_surface = create_shell_surface;
+	compositor->shell_interface.get_primary_view = get_primary_view;
+	compositor->shell_interface.set_toplevel = set_toplevel;
+	compositor->shell_interface.set_transient = set_transient;
+	compositor->shell_interface.set_fullscreen = set_fullscreen;
+	compositor->shell_interface.set_xwayland = set_xwayland;
+	compositor->shell_interface.move = move;
+	compositor->shell_interface.resize = resize;
+	compositor->shell_interface.set_title = set_title;
+	compositor->shell_interface.set_window_geometry = set_window_geometry;
 }
 
 static int
