@@ -46,6 +46,7 @@
 #include <winpr/input.h>
 
 #include "compositor.h"
+#include "../shared/str-util.h"
 #include "pixman-renderer.h"
 
 #define MAX_FREERDP_FDS 32

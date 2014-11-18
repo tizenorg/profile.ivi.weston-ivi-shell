@@ -65,6 +65,8 @@ struct wayland_compositor {
 
 	int use_pixman;
 	int sprawl_across_outputs;
+	int seatfilter;
+	char *seatname;
 
 	struct theme *theme;
 	cairo_device_t *frame_device;
@@ -114,6 +116,7 @@ struct wayland_output {
 
 struct wayland_parent_output {
 	struct wayland_output *output;
+	struct wayland_compositor *c;
 	struct wl_list link;
 
 	struct wl_output *global;
@@ -133,10 +136,12 @@ struct wayland_parent_output {
 	struct wl_list mode_list;
 	struct weston_mode *preferred_mode;
 	struct weston_mode *current_mode;
+	char *seatname;
 };
 
 struct wayland_shm_buffer {
 	struct wayland_output *output;
+
 	struct wl_list link;
 	struct wl_list free_link;
 
@@ -173,6 +178,10 @@ struct wayland_input {
 	int focus;
 	struct wayland_output *output;
 	struct wayland_output *keyboard_focus;
+
+	enum wl_seat_capability caps;
+	int initialized;
+	int caps_update_required;
 };
 
 struct gl_renderer_interface *gl_renderer;
@@ -596,6 +605,7 @@ wayland_output_destroy(struct weston_output *output_base)
 
 	if (output->frame)
 		frame_destroy(output->frame);
+	free(output->name);
 
 	cairo_surface_destroy(output->gl.border.top);
 	cairo_surface_destroy(output->gl.border.left);
@@ -1146,6 +1156,11 @@ wayland_output_create_for_parent_output(struct wayland_compositor *c,
 	struct weston_mode *mode;
 	int32_t x;
 
+	if(poutput->output) {
+		weston_log("parent output already exists\n");
+		return poutput->output;
+	}
+
 	if (poutput->current_mode) {
 		mode = poutput->current_mode;
 	} else if (poutput->preferred_mode) {
@@ -1154,7 +1169,7 @@ wayland_output_create_for_parent_output(struct wayland_compositor *c,
 		mode = container_of(poutput->mode_list.next,
 				    struct weston_mode, link);
 	} else {
-		weston_log("No valid modes found.  Skipping output");
+		weston_log("No valid modes found.  Skipping output\n");
 		return NULL;
 	}
 
@@ -1172,6 +1187,7 @@ wayland_output_create_for_parent_output(struct wayland_compositor *c,
 	if (!output)
 		return NULL;
 
+	poutput->output = output;
 	output->parent.output = poutput->global;
 
 	output->base.make = poutput->physical.make;
@@ -1593,37 +1609,76 @@ static const struct wl_keyboard_listener keyboard_listener = {
 };
 
 static void
+input_capabilities_updated(struct wayland_input *input)
+{
+	if ((input->caps & WL_SEAT_CAPABILITY_POINTER) &&
+			!input->parent.pointer) {
+		input->parent.pointer = wl_seat_get_pointer(input->parent.seat);
+		wl_pointer_set_user_data(input->parent.pointer, input);
+		wl_pointer_add_listener(input->parent.pointer,
+					&pointer_listener, input);
+		weston_seat_init_pointer(&input->base);
+	} else if (!(input->caps & WL_SEAT_CAPABILITY_POINTER) &&
+			input->parent.pointer) {
+		wl_pointer_destroy(input->parent.pointer);
+		input->parent.pointer = NULL;
+	}
+
+	if ((input->caps & WL_SEAT_CAPABILITY_KEYBOARD) &&
+			!input->parent.keyboard) {
+		input->parent.keyboard = wl_seat_get_keyboard(
+				input->parent.seat);
+		wl_keyboard_set_user_data(input->parent.keyboard, input);
+		wl_keyboard_add_listener(input->parent.keyboard,
+					 &keyboard_listener, input);
+	} else if (!(input->caps & WL_SEAT_CAPABILITY_KEYBOARD) &&
+			input->parent.keyboard) {
+		wl_keyboard_destroy(input->parent.keyboard);
+		input->parent.keyboard = NULL;
+	}
+	input->caps_update_required = 0;
+}
+
+static void
 input_handle_capabilities(void *data, struct wl_seat *seat,
 		          enum wl_seat_capability caps)
 {
 	struct wayland_input *input = data;
 
-	if ((caps & WL_SEAT_CAPABILITY_POINTER) && !input->parent.pointer) {
-		input->parent.pointer = wl_seat_get_pointer(seat);
-		wl_pointer_set_user_data(input->parent.pointer, input);
-		wl_pointer_add_listener(input->parent.pointer,
-					&pointer_listener, input);
-		weston_seat_init_pointer(&input->base);
-	} else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && input->parent.pointer) {
-		wl_pointer_destroy(input->parent.pointer);
-		input->parent.pointer = NULL;
-	}
-
-	if ((caps & WL_SEAT_CAPABILITY_KEYBOARD) && !input->parent.keyboard) {
-		input->parent.keyboard = wl_seat_get_keyboard(seat);
-		wl_keyboard_set_user_data(input->parent.keyboard, input);
-		wl_keyboard_add_listener(input->parent.keyboard,
-					 &keyboard_listener, input);
-	} else if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD) && input->parent.keyboard) {
-		wl_keyboard_destroy(input->parent.keyboard);
-		input->parent.keyboard = NULL;
+	input->caps = caps;
+	weston_log ("input_handle_capabilities input with seatname %s"
+		" and caps %d\n", input->base.seat_name, input->caps);
+	if (input->base.seat_name || !input->compositor->seatfilter) {
+		input_capabilities_updated (input);
+	} else {
+		input->caps_update_required = 1;
 	}
 }
 
 static void
 input_handle_name(void *data, struct wl_seat *seat,
-		  const char *name)
+                  const char *name)
 {
+	struct wayland_input *input = data;
+	if (input->compositor->seatfilter &&
+		(!name || !input->compositor->seatname ||
+		strcmp(input->compositor->seatname, name) != 0)) {
+		weston_log("seatname does not match %s:%s; remove "
+			"input\n", name, input->compositor->seatname);
+		wl_seat_destroy(input->parent.seat);
+		wl_list_remove(&input->link);
+		free(input);
+		return;
+	}
+	if (!input->initialized) {
+		weston_log ("initialise input with seat name %s\n", name);
+		weston_seat_init (&input->base, &input->compositor->base, name);
+		input->parent.cursor.surface = wl_compositor_create_surface(
+				input->compositor->parent.compositor);
+		input->initialized = 1;
+	}
+	if (input->caps_update_required)
+		input_capabilities_updated (input);
 }
 
 static const struct wl_seat_listener seat_listener = {
@@ -1640,17 +1695,51 @@ display_add_seat(struct wayland_compositor *c, uint32_t id, uint32_t version)
 	if (input == NULL)
 		return;
 
-	weston_seat_init(&input->base, &c->base, "default");
+	weston_log ("create input with id %d\n", id);
 	input->compositor = c;
-	input->parent.seat = wl_registry_bind(c->parent.registry, id,
-					      &wl_seat_interface, MIN(version, 4));
+	if (c->seatfilter)
+		input->parent.seat = wl_registry_bind(c->parent.registry, id,
+					      &wl_seat_interface,
+					      version > 2 ? version : 2);
+	else
+		input->parent.seat = wl_registry_bind(c->parent.registry, id,
+				      &wl_seat_interface, MIN(version, 4));
+	input->base.seat_name = NULL;
+	input->initialized = 0;
+
 	wl_list_insert(c->input_list.prev, &input->link);
 
 	wl_seat_add_listener(input->parent.seat, &seat_listener, input);
 	wl_seat_set_user_data(input->parent.seat, input);
 
-	input->parent.cursor.surface =
-		wl_compositor_create_surface(c->parent.compositor);
+	if (!input->compositor->seatfilter) {
+		weston_log ("initialise input with seat name %s\n",
+				c->seatname);
+		weston_seat_init (&input->base, &input->compositor->base,
+				c->seatname ? c->seatname : "");
+		input->parent.cursor.surface = wl_compositor_create_surface(
+				c->parent.compositor);
+		input->initialized = 1;
+	}
+}
+
+static void
+wayland_parent_output_destroy(struct wayland_parent_output *output)
+{
+	struct weston_mode *mode, *next;
+
+	if (output->output)
+		wayland_output_destroy(&output->output->base);
+
+	wl_output_destroy(output->global);
+	free(output->physical.make);
+	free(output->physical.model);
+	free(output->seatname);
+
+	wl_list_for_each_safe(mode, next, &output->mode_list, link) {
+		wl_list_remove(&mode->link);
+		free(mode);
+	}
 }
 
 static void
@@ -1726,9 +1815,60 @@ wayland_parent_output_mode(void *data, struct wl_output *wl_output_proxy,
 	}
 }
 
+#if HAVE_MULTISEAT
+static void
+wayland_parent_output_done(void *data,
+                   struct wl_output *wl_output)
+{
+	struct wayland_parent_output *output = data;
+	if (!output->seatname || !output->c || !output->c->seatname ||
+		strcmp(output->c->seatname, output->seatname) != 0) {
+		weston_log("output seatname (%s) doesnt match with"
+				" compositor seatname. destroying output\n",
+				output->seatname);
+		wayland_parent_output_destroy (output);
+		wl_list_remove(&output->link);
+		return;
+	}
+	if (output->c->sprawl_across_outputs) {
+		wayland_output_create_for_parent_output(output->c, output);
+	}
+}
+
+static void
+wayland_parent_output_scale(void *data,
+                    struct wl_output *wl_output,
+                    int32_t scale)
+{
+}
+
+static void
+wayland_parent_output_name(void *data, struct wl_output *wl_output_proxy,
+        const char *name)
+{
+	weston_log("output name %s\n", name);
+}
+
+static void
+wayland_parent_output_seatname(void *data, struct wl_output *wl_output_proxy,
+               const char *name)
+{
+	struct wayland_parent_output *poutput = data;
+	weston_log("output seatname %s\n", name);
+	poutput->seatname = strdup(name);
+}
+#endif
+
 static const struct wl_output_listener output_listener = {
 	wayland_parent_output_geometry,
 	wayland_parent_output_mode
+#if HAVE_MULTISEAT
+	,
+	wayland_parent_output_done,
+	wayland_parent_output_scale,
+	wayland_parent_output_name,
+	wayland_parent_output_seatname
+#endif
 };
 
 static void
@@ -1741,13 +1881,21 @@ wayland_compositor_register_output(struct wayland_compositor *c, uint32_t id)
 		return;
 
 	output->id = id;
-	output->global = wl_registry_bind(c->parent.registry, id,
+
+	if (c->seatfilter)
+		output->global = wl_registry_bind(c->parent.registry, id,
+					  &wl_output_interface, 3);
+	else
+		output->global = wl_registry_bind(c->parent.registry, id,
 					  &wl_output_interface, 1);
 	if (!output->global) {
 		free(output);
 		return;
 	}
 
+	output->c = c;
+	output->seatname = NULL;
+	output->output = NULL;
 	wl_output_add_listener(output->global, &output_listener, output);
 
 	output->scale = 0;
@@ -1756,27 +1904,9 @@ wayland_compositor_register_output(struct wayland_compositor *c, uint32_t id)
 	wl_list_init(&output->mode_list);
 	wl_list_insert(&c->parent.output_list, &output->link);
 
-	if (c->sprawl_across_outputs) {
-		wl_display_roundtrip(c->parent.wl_display);
-		wayland_output_create_for_parent_output(c, output);
-	}
-}
-
-static void
-wayland_parent_output_destroy(struct wayland_parent_output *output)
-{
-	struct weston_mode *mode, *next;
-
-	if (output->output)
-		wayland_output_destroy(&output->output->base);
-
-	wl_output_destroy(output->global);
-	free(output->physical.make);
-	free(output->physical.model);
-
-	wl_list_for_each_safe(mode, next, &output->mode_list, link) {
-		wl_list_remove(&mode->link);
-		free(mode);
+	if (!c->seatfilter && output->c->sprawl_across_outputs) {
+		wl_display_roundtrip(output->c->parent.wl_display);
+		wayland_output_create_for_parent_output(output->c, output);
 	}
 }
 
@@ -1929,7 +2059,8 @@ fullscreen_binding(struct weston_seat *seat_base, uint32_t time, uint32_t key,
 static struct wayland_compositor *
 wayland_compositor_create(struct wl_display *display, int use_pixman,
 			  const char *display_name, int *argc, char *argv[],
-			  struct weston_config *config)
+			  struct weston_config *config, const char* seatname,
+			  int seatfilter)
 {
 	struct wayland_compositor *c;
 	struct wl_event_loop *loop;
@@ -1938,6 +2069,8 @@ wayland_compositor_create(struct wl_display *display, int use_pixman,
 	c = zalloc(sizeof *c);
 	if (c == NULL)
 		return NULL;
+	c->seatname = seatname ? strdup(seatname) : NULL;
+	c->seatfilter = seatfilter;
 
 	if (weston_compositor_init(&c->base, display, argc, argv,
 				   config) < 0)
@@ -2008,6 +2141,7 @@ err_display:
 err_compositor:
 	weston_compositor_shutdown(&c->base);
 err_free:
+	free(c->seatname);
 	free(c);
 	return NULL;
 }
@@ -2030,6 +2164,7 @@ wayland_compositor_destroy(struct wayland_compositor *c)
 	wl_cursor_theme_destroy(c->cursor_theme);
 
 	weston_compositor_shutdown(&c->base);
+	free(c->seatname);
 	free(c);
 }
 
@@ -2042,7 +2177,12 @@ backend_init(struct wl_display *display, int *argc, char *argv[],
 	struct wayland_parent_output *poutput;
 	struct weston_config_section *section;
 	int x, count, width, height, scale, use_pixman, fullscreen, sprawl;
-	const char *section_name, *display_name;
+#if HAVE_MULTISEAT
+	int seatfilter = 1;
+#else
+	int seatfilter = 0;
+#endif
+	const char *section_name, *display_name, *seatname;
 	char *name;
 
 	const struct weston_option wayland_options[] = {
@@ -2067,14 +2207,24 @@ backend_init(struct wl_display *display, int *argc, char *argv[],
 	parse_options(wayland_options,
 		      ARRAY_LENGTH(wayland_options), argc, argv);
 
+	seatname = getenv("XDG_SEAT");
+	if (!seatname && seatfilter) {
+		weston_log("unable to determine seat for the compositor from"
+			"XDG_SEAT env. Disabling seat filter\n");
+		seatfilter = 0;
+	}
+
+	weston_log("Multiseat enabled %d\n", seatfilter);
 	c = wayland_compositor_create(display, use_pixman, display_name,
-				      argc, argv, config);
+				      argc, argv, config, seatname, seatfilter);
 	if (!c)
 		return NULL;
 
 	if (sprawl || c->parent.fshell) {
 		c->sprawl_across_outputs = 1;
 		wl_display_roundtrip(c->parent.wl_display);
+		if (wl_list_empty(&c->parent.output_list))
+			return NULL;
 
 		wl_list_for_each(poutput, &c->parent.output_list, link)
 			wayland_output_create_for_parent_output(c, poutput);

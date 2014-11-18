@@ -840,8 +840,18 @@ WL_EXPORT void
 weston_pointer_clamp(struct weston_pointer *pointer, wl_fixed_t *fx, wl_fixed_t *fy)
 {
 	struct weston_compositor *ec = pointer->seat->compositor;
-	struct weston_output *output, *prev = NULL;
-	int x, y, old_x, old_y, valid = 0;
+	struct weston_output *output, *prev = NULL, *closest = NULL;
+	int x, y, old_x, old_y;
+	int distance, min = INT_MAX;
+	int has_output = 0;
+
+	/* check if any output is attached to the pointer's seat or not */
+	wl_list_for_each(output, &ec->output_list, link) {
+		if (pointer->seat == output->seat_data.seat) {
+			has_output = 1;
+			break;
+		}
+	}
 
 	x = wl_fixed_to_int(*fx);
 	y = wl_fixed_to_int(*fy);
@@ -849,20 +859,26 @@ weston_pointer_clamp(struct weston_pointer *pointer, wl_fixed_t *fx, wl_fixed_t 
 	old_y = wl_fixed_to_int(pointer->y);
 
 	wl_list_for_each(output, &ec->output_list, link) {
-		if (pointer->seat->output && pointer->seat->output != output)
+		if (has_output && pointer->seat != output->seat_data.seat)
 			continue;
 		if (pixman_region32_contains_point(&output->region,
 						   x, y, NULL))
-			valid = 1;
+			return;
 		if (pixman_region32_contains_point(&output->region,
 						   old_x, old_y, NULL))
 			prev = output;
+		distance = abs(output->x + output->width / 2 - x) +
+			   abs(output->y + output->height / 2 - y);
+		if (distance < min) {
+			min = distance;
+			closest = output;
+		}
 	}
 
 	if (!prev)
-		prev = pointer->seat->output;
+		prev = closest;
 
-	if (prev && !valid)
+	if (prev)
 		weston_pointer_clamp_for_output(pointer, prev, fx, fy);
 }
 
@@ -901,7 +917,6 @@ weston_pointer_handle_output_destroy(struct wl_listener *listener, void *data)
 	struct weston_output *output, *closest = NULL;
 	int x, y, distance, min = INT_MAX;
 	wl_fixed_t fx, fy;
-
 	pointer = container_of(listener, struct weston_pointer,
 			       output_destroy_listener);
 	ec = pointer->seat->compositor;
@@ -913,8 +928,7 @@ weston_pointer_handle_output_destroy(struct wl_listener *listener, void *data)
 		if (pixman_region32_contains_point(&output->region,
 						   x, y, NULL))
 			return;
-
-		/* Aproximante the distance from the pointer to the center of
+		/* Approximate the distance from the pointer to the centre of
 		 * the output. */
 		distance = abs(output->x + output->width / 2 - x) +
 			   abs(output->y + output->height / 2 - y);
@@ -933,6 +947,7 @@ weston_pointer_handle_output_destroy(struct wl_listener *listener, void *data)
 
 	weston_pointer_clamp_for_output(pointer, closest, &fx, &fy);
 	weston_pointer_move(pointer, fx, fy);
+
 }
 
 WL_EXPORT void
