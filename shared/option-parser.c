@@ -27,21 +27,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <wayland-util.h>
 
 #include "config-parser.h"
+#include "str-util.h"
 
 static int
 handle_option(const struct weston_option *option, char *value)
 {
-	char* p;
-
 	switch (option->type) {
 	case WESTON_OPTION_INTEGER:
-		* (int32_t *) option->data = strtol(value, &p, 0);
-		return *value && !*p;
+		return weston_strtoi(value, NULL, 0, (int32_t *)option->data);
 	case WESTON_OPTION_UNSIGNED_INTEGER:
-		* (uint32_t *) option->data = strtoul(value, &p, 0);
-		return *value && !*p;
+		return weston_strtoui(value, NULL, 0, (uint32_t *)option->data);
 	case WESTON_OPTION_STRING:
 		* (char **) option->data = strdup(value);
 		return 1;

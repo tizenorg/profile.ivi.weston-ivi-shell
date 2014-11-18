@@ -21,6 +21,7 @@
  */
 
 #include "wscreensaver-glue.h"
+#include "../shared/str-util.h"
 
 double frand(double f)
 {
@@ -70,6 +71,7 @@ read_xpm_color(uint32_t *ctable, const char *line)
 	char cstr[10];
 	char *end;
 	uint32_t value;
+	bool conv;
 
 	if (sscanf(line, "%1c c %9s", &key, cstr) < 2) {
 		fprintf(stderr, "%s: error in XPM color definition '%s'\n",
@@ -77,11 +79,11 @@ read_xpm_color(uint32_t *ctable, const char *line)
 		return;
 	}
 
-	value = strtol(&cstr[1], &end, 16);
+	conv = weston_strtoui(&cstr[1], NULL, 16, &value);
 
 	if (strcmp(cstr, "None") == 0)
 		ctable[key] = 0x00000000;
-	else if (cstr[0] != '#' || !(cstr[1] != '\0' && *end == '\0')) {
+	else if (cstr[0] != '#' || !conv) {
 		fprintf(stderr, "%s: error interpreting XPM color '%s'\n",
 			progname, cstr);
 		return;
