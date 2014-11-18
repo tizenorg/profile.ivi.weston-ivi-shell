@@ -435,10 +435,10 @@ weston_launcher_destroy(struct weston_launcher *launcher)
 		weston_logind_destroy(launcher->logind);
 	} else if (launcher->fd != -1) {
 		close(launcher->fd);
-		wl_event_source_remove(launcher->source);
+		if (launcher->source) wl_event_source_remove(launcher->source);
 	} else {
 		weston_launcher_restore(launcher);
-		wl_event_source_remove(launcher->vt_source);
+		if (launcher->vt_source) wl_event_source_remove(launcher->vt_source);
 	}
 
 	if (launcher->tty >= 0)

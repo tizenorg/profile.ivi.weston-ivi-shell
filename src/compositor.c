@@ -56,6 +56,7 @@
 #include "compositor.h"
 #include "scaler-server-protocol.h"
 #include "../shared/os-compatibility.h"
+#include "../shared/str-util.h"
 #include "git-version.h"
 #include "version.h"
 
@@ -3190,7 +3191,12 @@ bind_output(struct wl_client *client,
 	struct wl_resource *resource;
 
 	resource = wl_resource_create(client, &wl_output_interface,
-				      MIN(version, 2), id);
+#if HAVE_MULTISEAT
+				      MIN(version, 2),
+#else
+				      MIN(version, 3),
+#endif
+				      id);
 	if (resource == NULL) {
 		wl_client_post_no_memory(client);
 		return;
@@ -3210,6 +3216,14 @@ bind_output(struct wl_client *client,
 	if (version >= WL_OUTPUT_SCALE_SINCE_VERSION)
 		wl_output_send_scale(resource,
 				     output->current_scale);
+
+#if HAVE_MULTISEAT
+	if (version >= WL_OUTPUT_NAME_SINCE_VERSION)
+		wl_output_send_name(resource, output->name);
+
+	if (version >= WL_OUTPUT_SEATNAME_SINCE_VERSION)
+		wl_output_send_seatname(resource, output->seat_data.seatname);
+#endif
 
 	wl_list_for_each (mode, &output->mode_list, link) {
 		wl_output_send_mode(resource,
@@ -3259,6 +3273,7 @@ weston_output_destroy(struct weston_output *output)
 	wl_signal_emit(&output->destroy_signal, output);
 
 	free(output->name);
+	free(output->seat_data.seatname);
 	pixman_region32_fini(&output->region);
 	pixman_region32_fini(&output->previous_damage);
 	output->compositor->output_id_pool &= ~(1 << output->id);
@@ -3442,6 +3457,11 @@ weston_output_init(struct weston_output *output, struct weston_compositor *c,
 		   int x, int y, int mm_width, int mm_height, uint32_t transform,
 		   int32_t scale)
 {
+#if HAVE_MULTISEAT
+	const int version = 3;
+#else
+	const int version = 2;
+#endif
 	output->compositor = c;
 	output->x = x;
 	output->y = y;
@@ -3465,7 +3485,7 @@ weston_output_init(struct weston_output *output, struct weston_compositor *c,
 	output->compositor->output_id_pool |= 1 << output->id;
 
 	output->global =
-		wl_global_create(c->wl_display, &wl_output_interface, 2,
+		wl_global_create(c->wl_display, &wl_output_interface, version,
 				 output, bind_output);
 	wl_signal_emit(&c->output_created_signal, output);
 }
@@ -3767,14 +3787,13 @@ log_uname(void)
 WL_EXPORT int
 weston_environment_get_fd(const char *env)
 {
-	char *e, *end;
+	char *e;
 	int fd, flags;
 
 	e = getenv(env);
 	if (!e)
 		return -1;
-	fd = strtol(e, &end, 0);
-	if (*end != '\0')
+	if (!weston_strtoi(e, NULL, 0, &fd))
 		return -1;
 
 	flags = fcntl(fd, F_GETFD);
@@ -4338,7 +4357,7 @@ int main(int argc, char *argv[])
 	char *modules = NULL;
 	char *option_modules = NULL;
 	char *log = NULL;
-	char *server_socket = NULL, *end;
+	char *server_socket = NULL;
 	int32_t idle_time = 300;
 	int32_t help = 0;
 	char *socket_name = NULL;
@@ -4350,6 +4369,7 @@ int main(int argc, char *argv[])
 	struct wl_client *primary_client;
 	struct wl_listener primary_client_destroyed;
 	struct weston_seat *seat;
+	const char *conf_file = NULL;
 
 	const struct weston_option core_options[] = {
 		{ WESTON_OPTION_STRING, "backend", 'B', &backend },
@@ -4405,7 +4425,10 @@ int main(int argc, char *argv[])
 	}
 
 	if (noconfig == 0)
-		config = weston_config_parse("weston.ini");
+		conf_file = getenv("WESTON_CONFIG");
+		if (conf_file == NULL)
+			conf_file = "weston.ini";
+		config = weston_config_parse(conf_file);
 	if (config != NULL) {
 		weston_log("Using config file '%s'\n",
 			   weston_config_get_full_path(config));
@@ -4452,8 +4475,7 @@ int main(int argc, char *argv[])
 	server_socket = getenv("WAYLAND_SERVER_SOCKET");
 	if (server_socket) {
 		weston_log("Running with single client\n");
-		fd = strtol(server_socket, &end, 0);
-		if (*end != '\0')
+		if (!weston_strtoi(server_socket, NULL, 0, &fd))
 			fd = -1;
 	} else {
 		fd = -1;

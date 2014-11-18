@@ -120,6 +120,7 @@ struct drm_compositor {
 
 	clockid_t clock;
 	struct udev_input input;
+	char *main_seat;
 
 	uint32_t cursor_width;
 	uint32_t cursor_height;
@@ -1878,14 +1879,21 @@ setup_output_seat_constraint(struct drm_compositor *ec,
 	if (strcmp(s, "") != 0) {
 		struct udev_seat *seat;
 
-		seat = udev_seat_get_named(&ec->input, s);
-		if (seat)
-			seat->base.output = output;
-
-		if (seat && seat->base.pointer)
-			weston_pointer_clamp(seat->base.pointer,
+		seat = udev_seat_get_named(&ec->base, s);
+		if (seat) {
+			udev_seat_link_output(seat, output);
+#if HAVE_MULTISEAT
+			if (!seat->input.libinput)
+				udev_input_init(&seat->input, &ec->base,
+						ec->udev, s);
+			else if (seat->input.suspended)
+				udev_input_enable(&seat->input);
+#endif
+			if (seat->base.pointer)
+				weston_pointer_clamp(seat->base.pointer,
 					     &seat->base.pointer->x,
 					     &seat->base.pointer->y);
+		}
 	}
 }
 
@@ -1994,6 +2002,9 @@ create_output_for_connector(struct drm_compositor *ec,
 		output->format = ec->format;
 
 	weston_config_section_get_string(section, "seat", &s, "");
+	output->base.seat_data.seatname = strdup(s);
+	weston_log("output %p belongs to seat '%s'\n", output,
+			output->base.seat_data.seatname);
 	setup_output_seat_constraint(ec, &output->base, s);
 	free(s);
 
@@ -2411,8 +2422,6 @@ drm_destroy(struct weston_compositor *ec)
 {
 	struct drm_compositor *d = (struct drm_compositor *) ec;
 
-	udev_input_destroy(&d->input);
-
 	wl_event_source_remove(d->udev_drm_source);
 	wl_event_source_remove(d->drm_source);
 
@@ -2426,7 +2435,7 @@ drm_destroy(struct weston_compositor *ec)
 	weston_launcher_destroy(d->base.launcher);
 
 	close(d->drm.fd);
-
+	free (d->main_seat);
 	free(d);
 }
 
@@ -2469,16 +2478,24 @@ session_notify(struct wl_listener *listener, void *data)
 	struct drm_compositor *ec = data;
 	struct drm_sprite *sprite;
 	struct drm_output *output;
+	struct udev_seat *useat;
+	struct weston_seat *seat, *next;
 
 	if (ec->base.session_active) {
 		weston_log("activating session\n");
 		compositor->state = ec->prev_state;
 		drm_compositor_set_modes(ec);
 		weston_compositor_damage_all(compositor);
-		udev_input_enable(&ec->input);
+		wl_list_for_each_safe(seat, next, &ec->base.seat_list, link) {
+		    useat = container_of(seat, struct udev_seat, base);
+		    udev_input_enable(&useat->input);
+		}
 	} else {
 		weston_log("deactivating session\n");
-		udev_input_disable(&ec->input);
+		wl_list_for_each_safe(seat, next, &ec->base.seat_list, link) {
+		    useat = container_of(seat, struct udev_seat, base);
+		    udev_input_disable(&useat->input);
+		}
 
 		ec->prev_state = compositor->state;
 		weston_compositor_offscreen(compositor);
@@ -2748,6 +2765,23 @@ renderer_switch_binding(struct weston_seat *seat, uint32_t time, uint32_t key,
 	switch_to_gl_renderer(c);
 }
 
+static int
+create_seats(struct drm_compositor *ec, int connector,
+		struct udev_device *drm_device)
+{
+	struct udev_seat *seat = udev_seat_get_named(&ec->base, ec->main_seat);
+	if (seat && udev_input_init(&seat->input, &ec->base,
+	    ec->udev, ec->main_seat) < 0) {
+		weston_log("failed to create input devices\n");
+		return -1;
+	}
+
+	if (create_outputs(ec, connector, drm_device) < 0)
+		return -1;
+
+	return 0;
+}
+
 static struct weston_compositor *
 drm_compositor_create(struct wl_display *display,
 		      struct drm_parameters *param,
@@ -2841,15 +2875,10 @@ drm_compositor_create(struct wl_display *display,
 	wl_list_init(&ec->sprite_list);
 	create_sprites(ec);
 
-	if (udev_input_init(&ec->input,
-			    &ec->base, ec->udev, param->seat_id) < 0) {
-		weston_log("failed to create input devices\n");
-		goto err_sprite;
-	}
-
-	if (create_outputs(ec, param->connector, drm_device) < 0) {
+	ec->main_seat = strdup(param->seat_id);
+	if (create_seats(ec, param->connector, drm_device) < 0) {
 		weston_log("failed to create output for %s\n", path);
-		goto err_udev_input;
+		goto err_sprite;
 	}
 
 	/* A this point we have some idea of whether or not we have a working
@@ -2901,8 +2930,6 @@ err_udev_monitor:
 	udev_monitor_unref(ec->udev_monitor);
 err_drm_source:
 	wl_event_source_remove(ec->drm_source);
-err_udev_input:
-	udev_input_destroy(&ec->input);
 err_sprite:
 	ec->base.renderer->destroy(&ec->base);
 	gbm_device_destroy(ec->gbm);
@@ -2916,6 +2943,7 @@ err_udev:
 err_compositor:
 	weston_compositor_shutdown(&ec->base);
 err_base:
+	free(ec->main_seat);
 	free(ec);
 	return NULL;
 }

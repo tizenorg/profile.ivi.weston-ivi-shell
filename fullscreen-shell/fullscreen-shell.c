@@ -32,9 +32,14 @@
 #include "compositor.h"
 #include "fullscreen-shell-server-protocol.h"
 
-struct fullscreen_shell {
+struct fs_client {
 	struct wl_client *client;
 	struct wl_listener client_destroyed;
+	struct wl_list link;
+};
+
+struct fullscreen_shell {
+	struct wl_list client_list;
 	struct weston_compositor *compositor;
 
 	struct weston_layer layer;
@@ -755,10 +760,9 @@ output_created(struct wl_listener *listener, void *data)
 static void
 client_destroyed(struct wl_listener *listener, void *data)
 {
-	struct fullscreen_shell *shell = container_of(listener,
-						     struct fullscreen_shell,
-						     client_destroyed);
-	shell->client = NULL;
+	struct fs_client *client = container_of(listener,
+			struct fs_client, client_destroyed);
+	if (client) wl_list_remove(&client->link);
 }
 
 static void
@@ -767,12 +771,15 @@ bind_fullscreen_shell(struct wl_client *client, void *data, uint32_t version,
 {
 	struct fullscreen_shell *shell = data;
 	struct wl_resource *resource;
+	struct fs_client *new_client;
 
-	if (shell->client != NULL && shell->client != client)
-		return;
-	else if (shell->client == NULL) {
-		shell->client = client;
-		wl_client_add_destroy_listener(client, &shell->client_destroyed);
+	new_client = malloc(sizeof *new_client);
+	if (new_client) {
+		memset(new_client, 0, sizeof *new_client);
+		new_client->client = client;
+		new_client->client_destroyed.notify = client_destroyed;
+		wl_list_insert(&shell->client_list, &new_client->link);
+		wl_client_add_destroy_listener(client, &new_client->client_destroyed);
 	}
 
 	resource = wl_resource_create(client, &_wl_fullscreen_shell_interface,
@@ -805,7 +812,7 @@ module_init(struct weston_compositor *compositor,
 	memset(shell, 0, sizeof *shell);
 	shell->compositor = compositor;
 
-	shell->client_destroyed.notify = client_destroyed;
+	wl_list_init(&shell->client_list);
 
 	weston_layer_init(&shell->layer, &compositor->cursor_layer.link);
 
@@ -820,7 +827,7 @@ module_init(struct weston_compositor *compositor,
 	wl_signal_add(&compositor->seat_created_signal,
 		      &shell->seat_created_listener);
 	wl_list_for_each(seat, &compositor->seat_list, link)
-		seat_created(NULL, seat);
+		seat_created(&shell->seat_created_listener, seat);
 
 	wl_global_create(compositor->wl_display,
 			 &_wl_fullscreen_shell_interface, 1, shell,
