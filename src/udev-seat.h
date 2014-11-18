@@ -29,12 +29,6 @@
 
 #include "compositor.h"
 
-struct udev_seat {
-	struct weston_seat base;
-	struct wl_list devices_list;
-	struct wl_listener output_create_listener;
-};
-
 struct udev_input {
 	struct udev *udev;
 	struct udev_monitor *udev_monitor;
@@ -42,6 +36,13 @@ struct udev_input {
 	char *seat_id;
 	struct weston_compositor *compositor;
 	int enabled;
+};
+
+struct udev_seat {
+	struct weston_seat base;
+	struct udev_input input;
+	struct wl_list devices_list;
+	struct wl_listener output_create_listener;
 };
 
 int udev_input_enable(struct udev_input *input);
@@ -52,6 +53,10 @@ int udev_input_init(struct udev_input *input,
 		    const char *seat_id);
 void udev_input_destroy(struct udev_input *input);
 
-struct udev_seat *udev_seat_get_named(struct udev_input *input,
+struct udev_seat *udev_seat_get_named(struct weston_compositor *c,
 				      const char *seat_name);
+
+int udev_seat_link_output(struct udev_seat *seat,
+			  struct weston_output *output);
+
 #endif

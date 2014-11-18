@@ -182,6 +182,11 @@ struct weston_output {
 	uint32_t id;
 	char *name;
 
+	struct {
+		char *seatname;
+		struct weston_seat *seat;
+	} seat_data;
+
 	void *renderer_state;
 
 	struct wl_list link;
@@ -505,8 +510,6 @@ struct weston_seat {
 	int pointer_device_count;
 	int keyboard_device_count;
 	int touch_device_count;
-
-	struct weston_output *output; /* constraint */
 
 	struct wl_signal destroy_signal;
 	struct wl_signal updated_caps_signal;
