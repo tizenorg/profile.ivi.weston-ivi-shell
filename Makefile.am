@@ -879,6 +879,8 @@ libshared_la_SOURCES =				\
 	shared/config-parser.c			\
 	shared/option-parser.c			\
 	shared/config-parser.h			\
+	shared/str-util.c			\
+	shared/str-util.h			\
 	shared/os-compatibility.c		\
 	shared/os-compatibility.h
 
@@ -915,6 +917,7 @@ TESTS = $(shared_tests) $(module_tests) $(weston_tests)
 
 shared_tests =					\
 	config-parser.test			\
+	strutil.test              		\
 	vertex-clip.test
 
 module_tests =					\
@@ -987,6 +990,9 @@ libtest_runner_la_CFLAGS = $(GCC_CFLAGS) $(COMPOSITOR_CFLAGS)
 config_parser_test_SOURCES = tests/config-parser-test.c
 config_parser_test_LDADD = libshared.la libtest-runner.la $(COMPOSITOR_LIBS)
 
+strutil_test_SOURCES = tests/strutil-test.c
+strutil_test_LDADD = libshared.la libtest-runner.la $(COMPOSITOR_LIBS)
+
 vertex_clip_test_SOURCES =			\
 	tests/vertex-clip-test.c		\
 	src/vertex-clipping.c			\
@@ -1052,9 +1058,11 @@ matrix_test_LDADD = -lm -lrt
 
 if BUILD_SETBACKLIGHT
 noinst_PROGRAMS += setbacklight
-setbacklight_SOURCES =				\
-	tests/setbacklight.c			\
-	src/libbacklight.c			\
+setbacklight_SOURCES =			\
+	tests/setbacklight.c		\
+	shared/str-util.c         	\
+	shared/str-util.h         	\
+	src/libbacklight.c		\
 	src/libbacklight.h
 setbacklight_CFLAGS = $(AM_CFLAGS) $(SETBACKLIGHT_CFLAGS)
 setbacklight_LDADD = $(SETBACKLIGHT_LIBS)
