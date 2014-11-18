@@ -1142,7 +1142,8 @@ rdp_compositor_create(struct wl_display *display,
 			goto err_output;
 		}
 
-		fd = strtoul(fd_str, NULL, 10);
+		if (!weston_strtoi(fd_str, NULL, 10, &fd))
+			fd = -1;
 		if (rdp_peer_init(freerdp_peer_new(fd), c))
 			goto err_output;
 	}
