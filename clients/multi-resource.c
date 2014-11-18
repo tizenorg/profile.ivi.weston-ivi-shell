@@ -39,6 +39,7 @@
 
 #include <wayland-client.h>
 #include "../shared/os-compatibility.h"
+#include "../shared/str-util.h"
 
 struct device {
 	enum { KEYBOARD, POINTER } type;
@@ -443,14 +444,11 @@ create_device(struct display *display, const char *time_desc, int type)
 		return -1;
 	}
 
-	errno = 0;
-	start_time = strtoul(time_desc, &tail, 10);
-	if (errno)
+	if (!weston_strtoi(time_desc, &tail, 10, &start_time))
 		goto error;
 
 	if (*tail == ':') {
-		end_time = strtoul(tail + 1, &tail, 10);
-		if (errno || *tail != '\0')
+		if (!weston_strtoi(tail + 1, &tail, 10, &end_time))
 			goto error;
 	} else if (*tail != '\0') {
 		goto error;

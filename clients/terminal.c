@@ -43,6 +43,7 @@
 #include <wayland-client.h>
 
 #include "../shared/config-parser.h"
+#include "../shared/str-util.h"
 #include "window.h"
 
 static int option_fullscreen;
@@ -1277,11 +1278,12 @@ static void
 handle_osc(struct terminal *terminal)
 {
 	char *p;
-	int code;
+	int code = -1;
 
 	terminal->escape[terminal->escape_length++] = '\0';
 	p = &terminal->escape[2];
-	code = strtol(p, &p, 10);
+
+	weston_strtoi(p, &p, 10, &code);
 	if (*p == ';') p++;
 
 	switch (code) {
@@ -1324,7 +1326,7 @@ handle_escape(struct terminal *terminal)
 			p++;
 			i++;
 		} else {
-			args[i] = strtol(p, &p, 10);
+			weston_strtoi(p, &p, 10, &args[i]);
 			set[i] = 1;
 		}
 	}

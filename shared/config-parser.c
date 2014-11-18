@@ -35,7 +35,9 @@
 #include <errno.h>
 
 #include <wayland-util.h>
+
 #include "config-parser.h"
+#include "str-util.h"
 
 #define container_of(ptr, type, member) ({				\
 	const __typeof__( ((type *)0)->member ) *__mptr = (ptr);	\
@@ -160,7 +162,6 @@ weston_config_section_get_int(struct weston_config_section *section,
 			      int32_t *value, int32_t default_value)
 {
 	struct weston_config_entry *entry;
-	char *end;
 
 	entry = config_section_get_entry(section, key);
 	if (entry == NULL) {
@@ -169,8 +170,7 @@ weston_config_section_get_int(struct weston_config_section *section,
 		return -1;
 	}
 
-	*value = strtol(entry->value, &end, 0);
-	if (*end != '\0') {
+	if (!weston_strtoi(entry->value, NULL, 0, value)) {
 		*value = default_value;
 		errno = EINVAL;
 		return -1;
@@ -186,7 +186,6 @@ weston_config_section_get_uint(struct weston_config_section *section,
 			       uint32_t *value, uint32_t default_value)
 {
 	struct weston_config_entry *entry;
-	char *end;
 
 	entry = config_section_get_entry(section, key);
 	if (entry == NULL) {
@@ -195,8 +194,7 @@ weston_config_section_get_uint(struct weston_config_section *section,
 		return -1;
 	}
 
-	*value = strtoul(entry->value, &end, 0);
-	if (*end != '\0') {
+	if (!weston_strtoui(entry->value, NULL, 0, value)) {
 		*value = default_value;
 		errno = EINVAL;
 		return -1;

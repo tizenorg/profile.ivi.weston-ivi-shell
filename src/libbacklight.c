@@ -43,6 +43,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include "../shared/str-util.h"
+
 static long backlight_get(struct backlight *backlight, char *node)
 {
 	char buffer[100];
@@ -64,7 +66,7 @@ static long backlight_get(struct backlight *backlight, char *node)
 		goto out;
 	}
 
-	value = strtol(buffer, NULL, 10);
+	weston_strtol(buffer, NULL, 10, &value);
 	ret = value;
 out:
 	if (fd >= 0)
