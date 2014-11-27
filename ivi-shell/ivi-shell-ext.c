@@ -139,17 +139,13 @@ subscribe_layout_surface_property_changes(struct shell_surface *shsurf)
     if (shsurf == NULL || shsurf->surface == NULL)
         return;
 
-    if (ivi_layout == NULL ||
-        ivi_layout->surface_find == NULL ||
-        ivi_layout->surface_add_notification == NULL)
+    if (ivi_layout == NULL || ivi_layout->surface_find == NULL || ivi_layout->surface_add_notification == NULL)
         return;
 
     ivisurf = ivi_layout->surface_find(shsurf->surface);
 
     if (ivisurf != NULL) {
-        ivi_layout->surface_add_notification(ivisurf,
-					     layout_surface_poperty_changed,
-					     (void *)shsurf);
+        ivi_layout->surface_add_notification(ivisurf, layout_surface_poperty_changed, (void *)shsurf);
     }
 }
 
@@ -162,9 +158,7 @@ unsubscribe_layout_surface_property_changes(struct shell_surface *shsurf)
     if (shsurf == NULL || shsurf->surface == NULL)
         return;
 
-    if (ivi_layout == NULL ||
-        ivi_layout->surface_find == NULL ||
-        ivi_layout->surface_remove_notification == NULL)
+    if (ivi_layout == NULL || ivi_layout->surface_find == NULL || ivi_layout->surface_remove_notification == NULL)
         return;
 
     ivisurf = ivi_layout->surface_find(shsurf->surface);
