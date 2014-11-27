@@ -82,7 +82,7 @@ struct ivi_shell_setting
  */
 
 static struct ivi_shell *
-get_instance(void)
+get_shell_instance(void)
 {
     static struct ivi_shell *shell = NULL;
 
@@ -520,7 +520,7 @@ ivi_shell_setting_create(struct ivi_shell_setting *dest,
 WL_EXPORT void
 send_wl_shell_info(int32_t pid, const char *window_title, struct weston_surface *surface)
 {
-	struct ivi_shell *shell = get_instance();
+	struct ivi_shell *shell = get_shell_instance();
 	struct wl_resource *resource;
 	uint32_t id_surface = 0;
 	struct ivi_shell_surface *ivisurf;
@@ -541,7 +541,7 @@ WL_EXPORT void
 get_wl_shell_info(struct ivi_layout_surface *layout_surface, uint32_t id_surface,
                   int32_t *pid_ret, const char **window_title_ret)
 {
-	struct ivi_shell *shell = get_instance();
+	struct ivi_shell *shell = get_shell_instance();
 	struct ivi_layout_interface *ivi_layout = shell->ivi_layout;
 	struct weston_surface *surface;
 	struct wl_array shsurflist;
@@ -615,7 +615,7 @@ module_init(struct weston_compositor *compositor,
 	void *module;
 	struct ivi_shell_setting setting = { };
 
-	struct ivi_shell *shell = get_instance();
+	struct ivi_shell *shell = get_shell_instance();
 	if (shell == NULL)
 		return -1;
 
