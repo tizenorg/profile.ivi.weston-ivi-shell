@@ -113,7 +113,7 @@ struct ivi_layout {
 	struct wl_list pending_transition_list;
 };
 
-struct ivi_layout *get_instance(void);
+struct ivi_layout *get_layout_instance(void);
 
 struct ivi_layout_transition;
 
