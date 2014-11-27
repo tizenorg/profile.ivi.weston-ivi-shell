@@ -112,7 +112,7 @@ struct ivi_layout_notification_callback {
 static struct ivi_layout ivilayout = {0};
 
 struct ivi_layout *
-get_instance(void)
+get_layout_instance(void)
 {
 	return &ivilayout;
 }
@@ -335,7 +335,7 @@ is_layer_in_screen(struct ivi_layout_layer *ivilayer,
 static void
 create_screen(struct weston_compositor *ec)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_screen *iviscrn = NULL;
 	struct weston_output *output = NULL;
 	int32_t count = 0;
@@ -1240,7 +1240,7 @@ WL_EXPORT int32_t
 ivi_layout_add_notification_create_layer(layer_create_notification_func callback,
 					 void *userdata)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_notification_callback *created_callback = NULL;
 
 	if (callback == NULL) {
@@ -1266,7 +1266,7 @@ WL_EXPORT void
 ivi_layout_remove_notification_create_layer(layer_create_notification_func callback,
 					    void *userdata)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	remove_notification(&layout->layer_notification.created.listener_list, callback, userdata);
 }
 
@@ -1274,7 +1274,7 @@ WL_EXPORT int32_t
 ivi_layout_add_notification_remove_layer(layer_remove_notification_func callback,
 					 void *userdata)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_notification_callback *removed_callback = NULL;
 
 	if (callback == NULL) {
@@ -1299,7 +1299,7 @@ WL_EXPORT void
 ivi_layout_remove_notification_remove_layer(layer_remove_notification_func callback,
 					    void *userdata)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	remove_notification(&layout->layer_notification.removed.listener_list, callback, userdata);
 }
 
@@ -1307,7 +1307,7 @@ WL_EXPORT int32_t
 ivi_layout_add_notification_create_surface(surface_create_notification_func callback,
 					   void *userdata)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_notification_callback *created_callback = NULL;
 
 	if (callback == NULL) {
@@ -1333,7 +1333,7 @@ WL_EXPORT void
 ivi_layout_remove_notification_create_surface(surface_create_notification_func callback,
 					      void *userdata)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	remove_notification(&layout->surface_notification.created.listener_list, callback, userdata);
 }
 
@@ -1341,7 +1341,7 @@ WL_EXPORT int32_t
 ivi_layout_add_notification_remove_surface(surface_remove_notification_func callback,
 					   void *userdata)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_notification_callback *removed_callback = NULL;
 
 	if (callback == NULL) {
@@ -1367,7 +1367,7 @@ WL_EXPORT void
 ivi_layout_remove_notification_remove_surface(surface_remove_notification_func callback,
 					      void *userdata)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	remove_notification(&layout->surface_notification.removed.listener_list, callback, userdata);
 }
 
@@ -1375,7 +1375,7 @@ WL_EXPORT int32_t
 ivi_layout_add_notification_configure_surface(surface_configure_notification_func callback,
 					      void *userdata)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_notification_callback *configure_changed_callback = NULL;
 	if (callback == NULL) {
 		weston_log("ivi_layout_add_notification_configure_surface: invalid argument\n");
@@ -1400,7 +1400,7 @@ WL_EXPORT void
 ivi_layout_remove_notification_configure_surface(surface_configure_notification_func callback,
 						 void *userdata)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	remove_notification(&layout->surface_notification.configure_changed.listener_list, callback, userdata);
 }
 
@@ -1419,7 +1419,7 @@ ivi_layout_get_id_of_layer(struct ivi_layout_layer *ivilayer)
 struct ivi_layout_layer *
 ivi_layout_get_layer_from_id(uint32_t id_layer)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_layer *ivilayer = NULL;
 
 	wl_list_for_each(ivilayer, &layout->layer_list, link) {
@@ -1434,7 +1434,7 @@ ivi_layout_get_layer_from_id(uint32_t id_layer)
 WL_EXPORT struct ivi_layout_surface *
 ivi_layout_get_surface_from_id(uint32_t id_surface)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_surface *ivisurf = NULL;
 
 	wl_list_for_each(ivisurf, &layout->surface_list, link) {
@@ -1449,7 +1449,7 @@ ivi_layout_get_surface_from_id(uint32_t id_surface)
 WL_EXPORT struct ivi_layout_screen *
 ivi_layout_get_screen_from_id(uint32_t id_screen)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_screen *iviscrn = NULL;
 
 	wl_list_for_each(iviscrn, &layout->screen_list, link) {
@@ -1540,7 +1540,7 @@ remove_configured_listener(struct ivi_layout_surface *ivisurf)
 void
 ivi_layout_surface_remove(struct ivi_layout_surface *ivisurf)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 
 	if (ivisurf == NULL) {
 		weston_log("ivi_layout_surface_remove: invalid argument\n");
@@ -1581,7 +1581,7 @@ ivi_layout_get_properties_of_layer(struct ivi_layout_layer *ivilayer)
 WL_EXPORT int32_t
 ivi_layout_get_screens(int32_t *pLength, struct ivi_layout_screen ***ppArray)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_screen *iviscrn = NULL;
 	int32_t length = 0;
 	int32_t n = 0;
@@ -1648,7 +1648,7 @@ ivi_layout_get_screens_under_layer(struct ivi_layout_layer *ivilayer,
 WL_EXPORT int32_t
 ivi_layout_get_layers(int32_t *pLength, struct ivi_layout_layer ***ppArray)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_layer *ivilayer = NULL;
 	int32_t length = 0;
 	int32_t n = 0;
@@ -1749,7 +1749,7 @@ ivi_layout_get_layers_under_surface(struct ivi_layout_surface *ivisurf,
 WL_EXPORT int32_t
 ivi_layout_get_surfaces(int32_t *pLength, struct ivi_layout_surface ***ppArray)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_surface *ivisurf = NULL;
 	int32_t length = 0;
 	int32_t n = 0;
@@ -1817,7 +1817,7 @@ WL_EXPORT struct ivi_layout_layer *
 ivi_layout_layer_create_with_dimension(uint32_t id_layer,
 				       int32_t width, int32_t height)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_layer *ivilayer = NULL;
 
 	ivilayer = get_layer(&layout->layer_list, id_layer);
@@ -1859,7 +1859,7 @@ ivi_layout_layer_create_with_dimension(uint32_t id_layer,
 WL_EXPORT void
 ivi_layout_layer_remove(struct ivi_layout_layer *ivilayer)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 
 	if (ivilayer == NULL) {
 		weston_log("ivi_layout_layer_remove: invalid argument\n");
@@ -2099,7 +2099,7 @@ ivi_layout_layer_set_render_order(struct ivi_layout_layer *ivilayer,
 				  struct ivi_layout_surface **pSurface,
 				  int32_t number)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_surface *ivisurf = NULL;
 	struct ivi_layout_surface *next = NULL;
 	uint32_t *id_surface = NULL;
@@ -2336,7 +2336,7 @@ WL_EXPORT int32_t
 ivi_layout_screen_add_layer(struct ivi_layout_screen *iviscrn,
 			    struct ivi_layout_layer *addlayer)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_layer *ivilayer = NULL;
 	struct ivi_layout_layer *next = NULL;
 	int is_layer_in_scrn = 0;
@@ -2374,7 +2374,7 @@ ivi_layout_screen_set_render_order(struct ivi_layout_screen *iviscrn,
 				   struct ivi_layout_layer **pLayer,
 				   const int32_t number)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_layer *ivilayer = NULL;
 	struct ivi_layout_layer *next = NULL;
 	uint32_t *id_layer = NULL;
@@ -2528,7 +2528,7 @@ WL_EXPORT int32_t
 ivi_layout_layer_add_surface(struct ivi_layout_layer *ivilayer,
 			     struct ivi_layout_surface *addsurf)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_surface *ivisurf = NULL;
 	struct ivi_layout_surface *next = NULL;
 	int is_surf_in_layer = 0;
@@ -2613,7 +2613,7 @@ ivi_layout_surface_set_source_rectangle(struct ivi_layout_surface *ivisurf,
 WL_EXPORT int32_t
 ivi_layout_commit_changes(void)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 
 	commit_surface_list(layout);
 	commit_layer_list(layout);
@@ -2650,8 +2650,9 @@ static void
 ivi_layout_surface_configure(struct ivi_layout_surface *ivisurf,
 			     int32_t width, int32_t height)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	int32_t in_init = 0;
+
 	ivisurf->surface->width_from_buffer  = width;
 	ivisurf->surface->height_from_buffer = height;
 
@@ -2695,7 +2696,7 @@ static struct ivi_layout_surface*
 ivi_layout_surface_create(struct weston_surface *wl_surface,
 			  uint32_t id_surface)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct ivi_layout_surface *ivisurf = NULL;
 	struct weston_view *tmpview = NULL;
 
@@ -2770,7 +2771,7 @@ ivi_layout_surface_create(struct weston_surface *wl_surface,
 static void
 ivi_layout_init_with_compositor(struct weston_compositor *ec)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 
 	layout->compositor = ec;
 
