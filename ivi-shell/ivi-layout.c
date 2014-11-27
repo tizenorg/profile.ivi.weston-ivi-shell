@@ -850,9 +850,8 @@ commit_screen_list(struct ivi_layout *layout)
 	struct weston_view        *view, *n;
 
 	/* clear view list of layout layer */
-	wl_list_for_each_safe(view, n, &layout->layout_layer.view_list, layer_link) {
-		wl_list_remove(&view->layer_link);
-		wl_list_init(&view->layer_link);
+	wl_list_for_each_safe(view, n, &layout->layout_layer.view_list.link, layer_link.link) {
+		weston_layer_entry_remove(&view->layer_link);
 	}
 
 
@@ -2580,7 +2579,7 @@ ivi_layout_surface_configure(struct ivi_layout_surface *ivisurf,
 	ivisurf->surface->width_from_buffer  = width;
 	ivisurf->surface->height_from_buffer = height;
 
-	if (ivisurf->prop.sourceWidth == 0 || ivisurf->prop.sourceHeight == 0) {
+	if (ivisurf->prop.source_width == 0 || ivisurf->prop.source_height == 0) {
 		ivisurf->prop.source_width = width;
 		ivisurf->prop.source_height = height;
 	}
@@ -2605,7 +2604,7 @@ ivi_layout_surface_configure(struct ivi_layout_surface *ivisurf,
 			   needs_commit ? "commiting it" : "no commit");
 
 		if (needs_commit)
-			ivi_layout_commitChanges();
+			ivi_layout_commit_changes();
 	}
 
 	wl_signal_emit(&layout->surface_notification.configure_changed, ivisurf);
@@ -2709,7 +2708,7 @@ ivi_layout_surface_find(struct weston_surface *wl_surface)
     struct ivi_layout_surface *ivisurf;
 
     if (wl_surface != NULL) {
-        wl_list_for_each(ivisurf, &layout->list_surface, link) {
+        wl_list_for_each(ivisurf, &layout->surface_list, link) {
             if (wl_surface == ivisurf->surface)
                 return ivisurf;
         }
@@ -2787,7 +2786,8 @@ background_create(struct ivi_layout *layout, struct weston_output *output)
 
 	wl_list_insert(&layout->background_list, &bg->link);
 
-	wl_list_insert(&layout->background_layer.view_list, &view->layer_link);
+	weston_layer_entry_insert(&layout->background_layer.view_list,
+				  &view->layer_link);
 
 	weston_view_set_position(view, x1,y1);
 	// weston_view_geometry_dirty(view);

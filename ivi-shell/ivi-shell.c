@@ -441,36 +441,38 @@ WL_EXPORT void
 get_wl_shell_info(struct ivi_layout_surface *layout_surface, uint32_t id_surface,
                   int32_t *pid_ret, const char **window_title_ret)
 {
-    struct weston_surface *surface;
-    struct wl_array shsurflist;
-    struct shell_surface **shsurface;
-    pid_t pid;
-    uid_t uid;
-    gid_t gid;
+	struct ivi_shell *shell = get_instance();
+	struct ivi_layout_interface *ivi_layout = shell->ivi_layout;
+	struct weston_surface *surface;
+	struct wl_array shsurflist;
+	struct shell_surface **shsurface;
+	pid_t pid;
+	uid_t uid;
+	gid_t gid;
 
-    *pid_ret = 0;
-    *window_title_ret = "";
+	*pid_ret = 0;
+	*window_title_ret = "";
 
-    if (layout_surface != NULL && id_surface > 0) {
-        surface = ivi_layout->get_weston_surface(layout_surface);
+	if (layout_surface != NULL && id_surface > 0) {
+		surface = ivi_layout->get_weston_surface(layout_surface);
 
-        if (surface != NULL && surface->resource != NULL && surface->resource->client != NULL) {
-            wl_client_get_credentials(surface->resource->client, &pid, &uid, &gid);
+		if (surface != NULL && surface->resource != NULL && surface->resource->client != NULL) {
+			wl_client_get_credentials(surface->resource->client, &pid, &uid, &gid);
 
-            *pid_ret = pid;
+			*pid_ret = pid;
 
-            ivi_shell_get_shell_surfaces(&shsurflist);
+			ivi_shell_get_shell_surfaces(&shsurflist);
 
-            wl_array_for_each(shsurface, &shsurflist) {
-                if (surface == shell_surface_get_surface(*shsurface)) {
-                    *window_title_ret = shell_surface_get_title(*shsurface);
-                    break;
-                }
-            }
+			wl_array_for_each(shsurface, &shsurflist) {
+				if (surface == shell_surface_get_surface(*shsurface)) {
+					*window_title_ret = shell_surface_get_title(*shsurface);
+					break;
+				}
+			}
 
-            wl_array_release(&shsurflist);
-        }
-    }
+			wl_array_release(&shsurflist);
+		}
+	}
 }
 
 /*
