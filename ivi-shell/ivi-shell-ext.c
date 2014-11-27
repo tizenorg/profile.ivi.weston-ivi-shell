@@ -38,8 +38,7 @@
 #include "ivi-shell-ext.h"
 #include "ivi-shell.h"
 #include "compositor.h"
-#include "ivi-layout-export.h"
-#include "ivi-layout.h"
+#include "ivi-layout-private.h"
 
 struct ivi_shell_ext;
 
@@ -663,7 +662,7 @@ init_ivi_shell_ext(struct weston_compositor *ec,
         ivi_layout = dlsym(module, "ivi_layout_interface");
 
     if (ivi_layout == NULL) {
-        weston_log("ivi-shell-ext: layer interface in '&s' is not loaded. "
+        weston_log("ivi-shell-ext: layer interface in '%s' is not loaded. "
                    "geometry hints will not be sent to clients\n",
                    ivi_layout_path);
     }

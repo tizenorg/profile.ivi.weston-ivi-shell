@@ -343,7 +343,7 @@ launcher_button(uint32_t surfaceId, struct wl_list *launcher_list,
 			continue;
 
 		char *argv[] = { NULL };
-		pid = execute_process(launcher->path, argv)
+		pid = execute_process(launcher->path, argv);
 
 		if (0 < pid && surface_creator &&
 		    launcher->setid_window_titles.size) {
