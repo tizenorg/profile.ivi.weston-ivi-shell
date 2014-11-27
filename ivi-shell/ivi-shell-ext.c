@@ -119,7 +119,7 @@ configure(struct weston_view *view, float x, float y)
 
 static void
 layout_surface_poperty_changed(struct ivi_layout_surface *ivisurf,
-                               struct ivi_layout_surface_properties *prop,
+                               const struct ivi_layout_surface_properties *prop,
                                enum ivi_layout_notification_mask mask,
                                void *userdata)
 {
