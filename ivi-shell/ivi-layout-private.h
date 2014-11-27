@@ -127,9 +127,7 @@ struct ivi_layout {
 	} background_color;
 };
 
-/*
-struct ivi_layout *get_instance(void);
-*/
+struct ivi_layout *get_layout_instance(void);
 
 struct ivi_layout_transition;
 
