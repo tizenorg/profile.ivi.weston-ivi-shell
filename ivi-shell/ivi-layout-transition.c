@@ -61,7 +61,7 @@ static struct ivi_layout_transition *
 get_transition_from_type_and_id(enum ivi_layout_transition_type type,
 				void *id_data)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct transition_node *node;
 	struct ivi_layout_transition *tran;
 
@@ -79,7 +79,7 @@ get_transition_from_type_and_id(enum ivi_layout_transition_type type,
 WL_EXPORT int32_t
 is_surface_transition(struct ivi_layout_surface *surface)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct transition_node *node;
 	struct ivi_layout_transition *tran;
 
@@ -181,7 +181,7 @@ ivi_layout_transition_set_create(struct weston_compositor *ec)
 static void
 layout_transition_register(struct ivi_layout_transition *trans)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 	struct transition_node *node;
 
 	node = malloc(sizeof(*node));
@@ -223,7 +223,7 @@ remove_transition(struct ivi_layout *layout,
 static void
 layout_transition_destroy(struct ivi_layout_transition *transition)
 {
-	struct ivi_layout *layout = get_instance();
+	struct ivi_layout *layout = get_layout_instance();
 
 	remove_transition(layout, transition);
 	if(transition->destroy_func)
