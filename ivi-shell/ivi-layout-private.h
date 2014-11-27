@@ -127,7 +127,9 @@ struct ivi_layout {
 	} background_color;
 };
 
+/*
 struct ivi_layout *get_instance(void);
+*/
 
 struct ivi_layout_transition;
 
@@ -326,7 +328,7 @@ struct ivi_layout_interface {
 					    surface_property_notification_func callback,
 					    void *userdata);
 
-	int32_t (*surface_remove_notification)(struct ivi_layout_surface *ivisurf);
+	void (*surface_remove_notification)(struct ivi_layout_surface *ivisurf);
 
 	void (*init_with_compositor)(struct weston_compositor *ec);
 
