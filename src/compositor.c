@@ -3192,9 +3192,9 @@ bind_output(struct wl_client *client,
 
 	resource = wl_resource_create(client, &wl_output_interface,
 #if HAVE_MULTISEAT
-				      MIN(version, 2),
-#else
 				      MIN(version, 3),
+#else
+				      MIN(version, 2),
 #endif
 				      id);
 	if (resource == NULL) {

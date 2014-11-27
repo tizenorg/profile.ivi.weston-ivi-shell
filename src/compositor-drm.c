@@ -119,7 +119,6 @@ struct drm_compositor {
 	uint32_t prev_state;
 
 	clockid_t clock;
-	struct udev_input input;
 	char *main_seat;
 
 	uint32_t cursor_width;
@@ -2769,7 +2768,11 @@ static int
 create_seats(struct drm_compositor *ec, int connector,
 		struct udev_device *drm_device)
 {
+#if HAVE_MULTISEAT
 	struct udev_seat *seat = udev_seat_get_named(&ec->base, ec->main_seat);
+#else
+	struct udev_seat *seat = udev_seat_get_named(&ec->base, "default");
+#endif
 	if (seat && udev_input_init(&seat->input, &ec->base,
 	    ec->udev, ec->main_seat) < 0) {
 		weston_log("failed to create input devices\n");
