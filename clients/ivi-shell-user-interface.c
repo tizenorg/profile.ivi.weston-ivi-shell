@@ -1108,6 +1108,7 @@ create_launchers(struct wlContextCommon *cmm, struct wl_list *launcher_list)
 /*
  * Add launcher to launcher_list
  */
+#if 0
 static void
 add_launcher(struct weston_config_section *section, uint32_t icon_surface_id,
              struct wl_list *launcher_list)
@@ -1124,6 +1125,7 @@ add_launcher(struct weston_config_section *section, uint32_t icon_surface_id,
 
     wl_list_insert(launcher_list->prev, &launcher->link);
 }
+#endif
 
 /**
  * Internal method to read out weston.ini to get configuration
