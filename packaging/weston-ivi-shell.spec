@@ -146,6 +146,7 @@ cp -rfva data/* %{buildroot}/%{_datadir}/weston/
 %files devel
 %manifest %{name}.manifest
 %_includedir/weston/ivi-layout-export.h
+%_includedir/weston/ivi-layout-private.h
 %_includedir/weston/ivi-shell.h
 %_includedir/weston/ivi-shell-ext.h
 %{_datadir}/%{name}/protocol/*
