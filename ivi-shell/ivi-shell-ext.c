@@ -119,7 +119,7 @@ configure(struct weston_view *view, float x, float y)
 
 static void
 layout_surface_poperty_changed(struct ivi_layout_surface *ivisurf,
-                               struct ivi_layout_SurfaceProperties *prop,
+                               struct ivi_layout_surface_properties *prop,
                                enum ivi_layout_notification_mask mask,
                                void *userdata)
 {
@@ -127,7 +127,7 @@ layout_surface_poperty_changed(struct ivi_layout_surface *ivisurf,
 
     if ((mask & IVI_NOTIFICATION_DEST_RECT)) {
         wl_shell_surface_send_configure(shsurf->resource, 0,
-                                        prop->destWidth, prop->destHeight);
+                                        prop->dest_width, prop->dest_height);
     }
 }
 
@@ -139,17 +139,13 @@ subscribe_layout_surface_property_changes(struct shell_surface *shsurf)
     if (shsurf == NULL || shsurf->surface == NULL)
         return;
 
-    if (ivi_layout == NULL ||
-        ivi_layout->surfaceFind == NULL ||
-        ivi_layout->surfaceAddNotification == NULL)
+    if (ivi_layout == NULL || ivi_layout->surface_find == NULL || ivi_layout->surface_add_notification == NULL)
         return;
 
-    ivisurf = ivi_layout->surfaceFind(shsurf->surface);
+    ivisurf = ivi_layout->surface_find(shsurf->surface);
 
     if (ivisurf != NULL) {
-        ivi_layout->surfaceAddNotification(ivisurf,
-                                           layout_surface_poperty_changed,
-                                           (void *)shsurf);
+        ivi_layout->surface_add_notification(ivisurf, layout_surface_poperty_changed, (void *)shsurf);
     }
 }
 
@@ -162,15 +158,13 @@ unsubscribe_layout_surface_property_changes(struct shell_surface *shsurf)
     if (shsurf == NULL || shsurf->surface == NULL)
         return;
 
-    if (ivi_layout == NULL ||
-        ivi_layout->surfaceFind == NULL ||
-        ivi_layout->surfaceRemoveNotification == NULL)
+    if (ivi_layout == NULL || ivi_layout->surface_find == NULL || ivi_layout->surface_remove_notification == NULL)
         return;
 
-    ivisurf = ivi_layout->surfaceFind(shsurf->surface);
+    ivisurf = ivi_layout->surface_find(shsurf->surface);
 
     if (ivisurf != NULL)
-        ivi_layout->surfaceRemoveNotification(ivisurf);
+        ivi_layout->surface_remove_notification(ivisurf);
 }
 
 /**
