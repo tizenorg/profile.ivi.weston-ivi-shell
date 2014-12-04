@@ -353,6 +353,8 @@
 
     <request name="set_minimized" />
 
+    <request name="needs_attention" />
+
     <event name="close">
       <description summary="surface wants to be closed">
         The close event is sent by the compositor when the user

@@ -3819,6 +3819,19 @@ xdg_surface_set_minimized(struct wl_client *client,
 	set_minimized(shsurf->surface, 1);
 }
 
+static void
+xdg_surface_needs_attention(struct wl_client *client,
+			    struct wl_resource *resource)
+{
+	struct shell_surface *shsurf = wl_resource_get_user_data(resource);
+
+	if (shsurf->type != SHELL_SURFACE_TOPLEVEL)
+		return;
+
+	/* apply compositor's own un-minimization logic (show) */
+	set_minimized(shsurf->surface, 0);
+}
+
 static const struct xdg_surface_interface xdg_surface_implementation = {
 	xdg_surface_destroy,
 	xdg_surface_set_parent,
@@ -3834,6 +3847,7 @@ static const struct xdg_surface_interface xdg_surface_implementation = {
 	xdg_surface_set_fullscreen,
 	xdg_surface_unset_fullscreen,
 	xdg_surface_set_minimized,
+	xdg_surface_needs_attention,
 };
 
 static void
