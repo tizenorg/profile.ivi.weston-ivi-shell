@@ -69,10 +69,12 @@ show_input_panel_surface(struct input_panel_surface *ipsurf)
 		if (!seat->keyboard)
 			continue;
 		focus = weston_surface_get_main_surface(seat->keyboard->focus);
-		ipsurf->output = focus->output;
-		x = ipsurf->output->x + (ipsurf->output->width - ipsurf->surface->width) / 2;
-		y = ipsurf->output->y + ipsurf->output->height - ipsurf->surface->height;
-		weston_view_set_position(ipsurf->view, x, y);
+		if (focus) {
+			ipsurf->output = focus->output;
+			x = ipsurf->output->x + (ipsurf->output->width - ipsurf->surface->width) / 2;
+			y = ipsurf->output->y + ipsurf->output->height - ipsurf->surface->height;
+			weston_view_set_position(ipsurf->view, x, y);
+		}
 	}
 
 	weston_layer_entry_insert(&shell->input_panel_layer.view_list,
