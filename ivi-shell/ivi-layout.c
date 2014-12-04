@@ -1376,7 +1376,7 @@ ivi_layout_get_id_of_layer(struct ivi_layout_layer *ivilayer)
 	return ivilayer->id_layer;
 }
 
-struct ivi_layout_layer *
+WL_EXPORT struct ivi_layout_layer *
 ivi_layout_get_layer_from_id(uint32_t id_layer)
 {
 	struct ivi_layout *layout = get_layout_instance();
@@ -1497,7 +1497,7 @@ remove_configured_listener(struct ivi_layout_surface *ivisurf)
 	}
 }
 
-void
+WL_EXPORT void
 ivi_layout_surface_remove(struct ivi_layout_surface *ivisurf)
 {
 	struct ivi_layout *layout = get_layout_instance();
@@ -2192,7 +2192,7 @@ ivi_layout_surface_set_destination_rectangle(struct ivi_layout_surface *ivisurf,
 	return IVI_SUCCEEDED;
 }
 
-int32_t
+WL_EXPORT int32_t
 ivi_layout_surface_set_dimension(struct ivi_layout_surface *ivisurf,
 				 int32_t dest_width, int32_t dest_height)
 {
@@ -2227,7 +2227,7 @@ ivi_layout_surface_get_dimension(struct ivi_layout_surface *ivisurf,
 	return IVI_SUCCEEDED;
 }
 
-int32_t
+WL_EXPORT int32_t
 ivi_layout_surface_set_position(struct ivi_layout_surface *ivisurf,
 				int32_t dest_x, int32_t dest_y)
 {
