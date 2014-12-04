@@ -2642,8 +2642,12 @@ set_minimized(struct weston_surface *surface, uint32_t is_true)
 			if (!seat->keyboard)
 				continue;
 			focus = weston_surface_get_main_surface(seat->keyboard->focus);
-			if (focus == view->surface)
+			if (focus == view->surface) {
 				weston_keyboard_set_focus(seat->keyboard, NULL);
+				weston_pointer_set_focus(seat->pointer, NULL,
+							 wl_fixed_from_int(0),
+							 wl_fixed_from_int(0));
+ 			}
 		}
 	}
 	else {
