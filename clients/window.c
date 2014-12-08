@@ -1410,10 +1410,14 @@ static void handle_wl_shell_configure(void *data,
 {
 	struct surface *surface = (struct surface *)data;
 
-	fprintf(stderr, "wl_shell: got configure event: edges=%u size=%dx%d\n",
-	        edges, width,height);
+	if (surface->window->display->create_ivi_surface)
+		fprintf(stderr, "ignoring wl_shell configure event: done in ivi_surface callabcks\n");
+	else {
+		fprintf(stderr, "wl_shell: got configure event: edges=%u size=%dx%d\n",
+			edges, width,height);
 
-        window_schedule_resize(surface->window, width, height);
+        	window_schedule_resize(surface->window, width, height);
+	}
 }
 
 static void handle_wl_shell_popup_done(void *data,
@@ -1449,36 +1453,6 @@ surface_create_surface(struct surface *surface, uint32_t flags)
 {
 	struct display *display = surface->window->display;
 	struct rectangle allocation = surface->allocation;
-
-	if (display->ivi_application) {
-		if (!surface->toysurface && strcmp(surface->window->title,"Virtual keyboard")!=0) {
-			if (display->create_ivi_surface) {
-				uint32_t id_ivisurf = IVI_SURFACE_ID + (uint32_t)getpid();
-				surface->window->ivi_surface =
-					ivi_application_surface_create(display->ivi_application,
-					                               id_ivisurf, surface->surface);
-				if (surface->window->ivi_surface == NULL) {
-					fprintf(stderr, "Failed to create ivi_client_surface\n");
-					abort();
-                                }
-                                fprintf(stderr, "created IVI surface %u\n", id_ivisurf);
-			}
-
-			surface->window->shell_surface =
-				wl_shell_get_shell_surface(display->shell, surface->surface);
-			if (surface->window->shell_surface == NULL)
-				fprintf(stderr, "could not obtain shell_surface\n");
-			else {
-				wl_shell_surface_add_listener(surface->window->shell_surface,
-				                              &wl_shell_surface_listener,
-				                              surface);
-				if (surface->window->title) {
-					wl_shell_surface_set_title(surface->window->shell_surface,
-					                           surface->window->title);
-				}
-			}
-		}
-	}
 
 	if (!surface->toysurface && display->dpy &&
 	    surface->buffer_type == WINDOW_BUFFER_TYPE_EGL_WINDOW) {
@@ -4630,15 +4604,26 @@ window_create(struct display *display)
 		xdg_surface_add_listener(window->xdg_surface,
 					 &xdg_surface_listener, window);
 	} else if (display->ivi_application) {
-		/* auto generation of ivi_id based on process id + basement of id */
-		id_ivisurf = IVI_SURFACE_ID + (uint32_t)getpid();
-		window->ivi_surface =
-			ivi_application_surface_create(display->ivi_application,
+		if  (display->create_ivi_surface) {
+			/* auto generation of ivi_id based on process id + basement of id */
+			id_ivisurf = IVI_SURFACE_ID + (uint32_t)getpid();
+			window->ivi_surface =
+				ivi_application_surface_create(display->ivi_application,
 						       id_ivisurf, window->main_surface->surface);
-		fail_on_null(window->ivi_surface);
+			fail_on_null(window->ivi_surface);
 
-		ivi_surface_add_listener(window->ivi_surface,
-					 &ivi_surface_listener, window);
+			ivi_surface_add_listener(window->ivi_surface,
+						 &ivi_surface_listener, window);
+		}
+
+		window->shell_surface = wl_shell_get_shell_surface(display->shell, window->main_surface->surface);
+		fail_on_null(window->shell_surface);
+		wl_shell_surface_add_listener(window->shell_surface,
+				              &wl_shell_surface_listener,
+				              window->main_surface->surface);
+		if (window->title) {
+			wl_shell_surface_set_title(window->shell_surface, window->title);
+		}
 	}
 
 	return window;
