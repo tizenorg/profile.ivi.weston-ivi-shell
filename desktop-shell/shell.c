@@ -2610,6 +2610,7 @@ set_minimized(struct weston_surface *surface, uint32_t is_true)
 	struct weston_seat *seat;
 	struct weston_surface *focus;
 	struct weston_view *view;
+	float x, y;
 
 	view = get_default_view(surface);
 	if (!view)
@@ -2623,6 +2624,17 @@ set_minimized(struct weston_surface *surface, uint32_t is_true)
 	weston_layer_entry_remove(&view->layer_link);
 	 /* hide or show, depending on the state */
 	if (is_true) {
+		 /* if the surface is fullscreen, unset the global fullscreen state,
+		  * but keep the surface centered on its previous output.
+		  */
+		if (shsurf->state.fullscreen) {
+			x = shsurf->view->geometry.x;
+			y = shsurf->view->geometry.y;
+			unset_fullscreen(shsurf);
+			weston_view_set_position(shsurf->view, x, y);
+		}
+
+		weston_layer_entry_remove(&view->layer_link);
 		weston_layer_entry_insert(&shsurf->shell->minimized_layer.view_list, &view->layer_link);
 
 		drop_focus_state(shsurf->shell, current_ws, view->surface);
@@ -5770,10 +5782,22 @@ struct switcher {
 static void
 switcher_next(struct switcher *switcher)
 {
+	struct focus_state *state;
+	struct weston_surface *surface;
 	struct weston_view *view;
 	struct weston_surface *first = NULL, *prev = NULL, *next = NULL;
 	struct shell_surface *shsurf;
 	struct workspace *ws = get_current_workspace(switcher->shell);
+
+	 /* if the focused surface is fullscreen, minimize it */
+	wl_list_for_each(state, &ws->focus_list, link) {
+		if (state->keyboard_focus) {
+			surface = weston_surface_get_main_surface(state->keyboard_focus);
+			shsurf = get_shell_surface(surface);
+			if (shsurf->state.fullscreen)
+				set_minimized(surface, 1);
+		}
+	}
 
 	 /* temporary re-display minimized surfaces */
 	struct weston_view *tmp;
@@ -5821,7 +5845,8 @@ switcher_next(struct switcher *switcher)
 		view->alpha = 1.0;
 
 	shsurf = get_shell_surface(switcher->current);
-	if (shsurf && shsurf->state.fullscreen)
+	if (shsurf && shsurf->state.fullscreen
+		   && shsurf->fullscreen.black_view)
 		shsurf->fullscreen.black_view->alpha = 1.0;
 }
 
