@@ -3071,7 +3071,7 @@ int main(int argc, char *argv[])
 	weston_config_destroy(config);
 
 	if (parse_options(terminal_options,
-			  ARRAY_LENGTH(terminal_options), &argc, argv) > 1) {
+			  ARRAY_LENGTH(terminal_options), &argc, argv) > 1 && false) {
 		printf("Usage: %s [OPTIONS]\n"
 		       "  --fullscreen or -f\n"
 		       "  --font=NAME\n"
