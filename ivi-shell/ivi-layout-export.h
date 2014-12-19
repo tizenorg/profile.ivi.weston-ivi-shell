@@ -81,6 +81,7 @@ struct ivi_layout_surface_properties
 	bool visibility;
 	int32_t transition_type;
 	uint32_t transition_duration;
+	uint32_t has_keyboard_focus;
 };
 
 struct ivi_layout_layer_properties
@@ -116,6 +117,7 @@ enum ivi_layout_notification_mask {
 	IVI_NOTIFICATION_ADD         = (1 << 9),
 	IVI_NOTIFICATION_REMOVE      = (1 << 10),
 	IVI_NOTIFICATION_CONFIGURE   = (1 << 11),
+	IVI_NOTIFICATION_KEYBOARD_FOCUS = (1 << 12),
 	IVI_NOTIFICATION_ALL         = 0xFFFF
 };
 
@@ -512,6 +514,20 @@ ivi_layout_surface_set_opacity(struct ivi_layout_surface *ivisurf,
  */
 wl_fixed_t
 ivi_layout_surface_get_opacity(struct ivi_layout_surface *ivisurf);
+
+
+/**
+ * \brief Set the keyboard focus on a certain surface
+ * To receive keyboard events, 2 conditions must be fulfilled:
+ * 1- The surface must accept events from keyboard. See ilm_UpdateInputEventAcc eptanceOn
+ * 2- The keyboard focus must be set on that surface
+ *
+ * \return 0 if the method call was successful
+ * \return -1 if the method call was failed
+ */
+int32_t
+ivi_layout_set_keyboard_focus_on(struct ivi_layout_surface *ivisurf);
+
 
 /**
  * \brief Set the destination area of a surface within a layer for rendering.
