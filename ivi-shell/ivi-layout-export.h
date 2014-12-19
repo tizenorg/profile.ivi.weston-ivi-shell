@@ -530,6 +530,15 @@ ivi_layout_set_keyboard_focus_on(struct ivi_layout_surface *ivisurf);
 
 
 /**
+ * \brief Get the indentifier of the surface which hold the keyboard focus
+ *
+ * \return 0 if the method call was successful
+ * \return -1 if the method call was failed
+ */
+int32_t
+ivi_layout_get_keyboard_focus_surface_id(struct ivi_layout_surface **pSurfaceId);
+
+/**
  * \brief Set the destination area of a surface within a layer for rendering.
  *
  * The surface will be scaled to this rectangle for rendering.
