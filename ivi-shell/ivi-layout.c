@@ -2213,6 +2213,27 @@ ivi_layout_set_keyboard_focus_on(struct ivi_layout_surface *ivisurf)
 	return 0;
 }
 
+WL_EXPORT int32_t
+ivi_layout_get_keyboard_focus_surface_id(struct ivi_layout_surface **pSurfaceId)
+{
+	struct wl_list *surface_list = &get_layout_instance()->surface_list;
+	struct ivi_layout_surface *current_surf;
+
+	if (surface_list == NULL) {
+		weston_log("%s: surface list is NULL\n", __FUNCTION__);
+		return -1;
+	}
+
+	wl_list_for_each(current_surf, surface_list, link) {
+		if (current_surf->prop.has_keyboard_focus != 0) {
+			*pSurfaceId = current_surf;
+			break;
+		}
+	}
+
+	return 0;
+}
+
 
 WL_EXPORT int32_t
 ivi_layout_surface_set_destination_rectangle(struct ivi_layout_surface *ivisurf,
