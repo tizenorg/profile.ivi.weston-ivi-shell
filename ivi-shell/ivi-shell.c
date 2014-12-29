@@ -622,6 +622,20 @@ get_wl_shell_info(struct ivi_layout_surface *layout_surface, uint32_t id_surface
 	}
 }
 
+static void
+click_to_activate_binding(struct weston_seat *seat, uint32_t time, uint32_t button,
+                          void *data)
+{
+	if (seat->pointer->grab != &seat->pointer->default_grab) {
+		return;
+	}
+	if (seat->pointer->focus == NULL) {
+		return;
+	}
+
+	weston_surface_activate(seat->pointer->focus->surface, seat);
+}
+
 /*
  * Initialization of ivi-shell.
  */
@@ -722,6 +736,8 @@ module_init(struct weston_compositor *compositor,
 		dlclose(module);
 		return -1;
 	}
+
+	weston_compositor_add_button_binding(compositor, BTN_LEFT, 0, click_to_activate_binding, shell);
 
 	free(setting.ivi_module);
 
