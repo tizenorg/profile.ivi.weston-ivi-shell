@@ -125,7 +125,6 @@ install -m 644 protocol/*.c \
 mkdir -p %{buildroot}%{weston_config_dir}
 install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
 install -d %{buildroot}/%{_datadir}/weston/
-cp -rfva data/* %{buildroot}/%{_datadir}/weston/
 
 %define _unpackaged_files_terminate_build 0
 
