@@ -125,7 +125,6 @@ install -m 644 protocol/*.c \
 mkdir -p %{buildroot}%{weston_config_dir}
 install -m 0644 %{SOURCE1} %{buildroot}%{weston_config_dir}
 install -d %{buildroot}/%{_datadir}/weston/
-cp -rfva data/* %{buildroot}/%{_datadir}/weston/
 
 %define _unpackaged_files_terminate_build 0
 
@@ -142,6 +141,16 @@ cp -rfva data/* %{buildroot}/%{_datadir}/weston/
 
 %exclude %_bindir/weston
 %exclude %_libdir/weston/desktop-shell.so
+# exclude png files installed by the weston package
+%exclude %_datadir/weston/wayland.svg
+%exclude %_datadir/weston/wayland.png
+%exclude %_datadir/weston/pattern.png
+%exclude %_datadir/weston/terminal.png
+%exclude %_datadir/weston/border.png
+%exclude %_datadir/weston/icon_window.png
+%exclude %_datadir/weston/sign_close.png
+%exclude %_datadir/weston/sign_maximize.png
+%exclude %_datadir/weston/sign_minimize.png
 
 %files devel
 %manifest %{name}.manifest
