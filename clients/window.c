@@ -1557,12 +1557,6 @@ surface_destroy(struct surface *surface)
 	if (surface->toysurface)
 		surface->toysurface->destroy(surface->toysurface);
 
-	if (surface->window->display->ivi_application) {
-		if(surface->window->ivi_surface && strcmp(surface->window->title,"Virtual keyboard"))
-			ivi_surface_destroy(surface->window->ivi_surface);
-		ivi_application_destroy(surface->window->display->ivi_application);
-	}
-
 	wl_list_remove(&surface->link);
 	free(surface);
 }
