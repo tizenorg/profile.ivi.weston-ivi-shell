@@ -3092,6 +3092,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 
 	display_run(d);
+	display_destroy(d);
 
 	return 0;
 }
